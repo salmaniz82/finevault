@@ -1,0 +1,4 @@
+# Minimal portable configuration for ephemeral test keys only.
+[ req ]
+distinguished_name = req_distinguished_name
+[ req_distinguished_name ]
