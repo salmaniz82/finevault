@@ -97,6 +97,26 @@ class SigningDemoTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_hosting_configuration_errors_are_visible_without_sending_requests(): void
+    {
+        config(['docusign.private_key_path' => storage_path('missing-key.key'), 'docusign.ca_bundle' => 'D:/missing-local-only-file.pem']);
+        $this->actingAs($this->actor('admin'))->get('/signing-demo')->assertOk()
+            ->assertSee('private key file is missing or unreadable')->assertSee('DOCUSIGN_CA_BUNDLE must point to a readable CA file')
+            ->assertDontSee('D:/missing-local-only-file.pem');
+        $this->post('/signing-demo/connect')->assertRedirect('/signing-demo')->assertSessionHasErrors('docusign');
+        $this->post('/signing-demo/sign')->assertRedirect('/signing-demo')->assertSessionHasErrors('docusign');
+        Http::assertNothingSent();
+    }
+
+    public function test_hosted_consent_uses_the_configured_https_callback_without_a_custom_ca_bundle(): void
+    {
+        config(['docusign.ca_bundle' => null, 'docusign.redirect_uri' => 'https://portal.example.com/signing-demo/consent']);
+        $response = $this->actingAs($this->actor('admin'))->post('/signing-demo/connect');
+        parse_str(parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('https://portal.example.com/signing-demo/consent', $query['redirect_uri']);
+        Http::assertNothingSent();
+    }
+
     public function test_admin_can_preview_and_sign_without_creating_client_or_records(): void
     {
         Http::fake([

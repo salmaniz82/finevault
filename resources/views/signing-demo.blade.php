@@ -1,5 +1,6 @@
 @extends('layout')
 @section('content')
+@if($configurationIssues)<div class="notice error" role="alert"><div><strong>DocuSign setup needs attention</strong><ul>@foreach($configurationIssues as $issue)<li>{{ $issue }}</li>@endforeach</ul></div></div>@endif
 <div class="page-head"><div><p class="eyebrow copper">DOCUSIGN · SANDBOX</p><h1>From agreement to signature.</h1><p>Try the client journey with a prepared agreement. No client setup required.</p></div><span class="badge">Admin demonstration</span></div>
 <div class="detail-grid"><div>
 <section class="card"><div class="card-head"><h2>Alexander Morgan’s onboarding</h2><span class="badge {{ $status === 'completed' ? 'approved' : 'pending' }}">{{ ucfirst($status) }}</span></div>

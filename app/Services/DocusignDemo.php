@@ -15,12 +15,38 @@ class DocusignDemo
     private function http(): \Illuminate\Http\Client\PendingRequest
     {
         // Use an explicitly configured trusted bundle; never disable TLS checks.
-        return Http::withOptions(['verify' => config('docusign.ca_bundle') ?: true]);
+        $bundle = config('docusign.ca_bundle');
+        if ($bundle && (! is_string($bundle) || ! is_file($bundle) || ! is_readable($bundle))) {
+            throw new RuntimeException('DOCUSIGN_CA_BUNDLE must point to a readable CA file on this server. Leave it empty to use the server\'s default trusted certificates.');
+        }
+        return Http::withOptions(['verify' => $bundle ?: true]);
     }
 
     public function ready(): bool
     {
-        return config('docusign.integration_key') && config('docusign.user_id') && config('docusign.account_id') && is_file(config('docusign.private_key_path'));
+        return $this->configurationIssues() === [];
+    }
+
+    public function configurationIssues(): array
+    {
+        $issues = [];
+        foreach (['integration_key' => 'DOCUSIGN_INTEGRATION_KEY', 'user_id' => 'DOCUSIGN_USER_ID', 'account_id' => 'DOCUSIGN_ACCOUNT_ID'] as $key => $name) {
+            if (! config('docusign.'.$key)) {
+                $issues[] = $name.' is missing from this server\'s environment configuration.';
+            }
+        }
+        $key = config('docusign.private_key_path');
+        if (! is_string($key) || ! is_file($key) || ! is_readable($key)) {
+            $issues[] = 'The DocuSign private key file is missing or unreadable. Upload it privately to storage/app/private/docusign.key or set DOCUSIGN_PRIVATE_KEY_PATH to its server location.';
+        }
+        $bundle = config('docusign.ca_bundle');
+        if ($bundle && (! is_string($bundle) || ! is_file($bundle) || ! is_readable($bundle))) {
+            $issues[] = 'DOCUSIGN_CA_BUNDLE must point to a readable CA file on this server. Leave it empty to use the server\'s default trusted certificates.';
+        }
+        if (! filter_var(config('docusign.redirect_uri'), FILTER_VALIDATE_URL) || ! in_array(parse_url(config('docusign.redirect_uri'), PHP_URL_SCHEME), ['http', 'https'])) {
+            $issues[] = 'DOCUSIGN_REDIRECT_URI must be the full HTTP or HTTPS consent callback URL registered with DocuSign.';
+        }
+        return $issues;
     }
 
     public function consentUrl(string $state): string
@@ -43,7 +69,7 @@ class DocusignDemo
     private function token(): string
     {
         if (! $this->ready()) {
-            throw new RuntimeException('DocuSign sandbox credentials are not configured.');
+            throw new RuntimeException(implode(' ', $this->configurationIssues()));
         }
         return Cache::remember('docusign-demo-token-'.hash('sha256', config('docusign.integration_key').config('docusign.user_id')), 3000, function () {
             $encode = fn ($value) => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');

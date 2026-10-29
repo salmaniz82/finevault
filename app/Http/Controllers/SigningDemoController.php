@@ -21,7 +21,7 @@ class SigningDemoController extends Controller
     public function show(Request $request, DocusignDemo $demo)
     {
         $this->admin($request);
-        return view('signing-demo', ['title' => 'Signing demonstration', 'ready' => $demo->ready(), 'status' => $request->session()->get('docusign_demo.status', 'Not started')]);
+        return view('signing-demo', ['title' => 'Signing demonstration', 'ready' => $demo->ready(), 'configurationIssues' => $demo->configurationIssues(), 'status' => $request->session()->get('docusign_demo.status', 'Not started')]);
     }
 
     public function sample(Request $request)
@@ -33,6 +33,9 @@ class SigningDemoController extends Controller
     public function connect(Request $request, DocusignDemo $demo)
     {
         $this->admin($request);
+        if (! $demo->ready()) {
+            return redirect('/signing-demo')->withErrors(['docusign' => implode(' ', $demo->configurationIssues())]);
+        }
         $request->session()->put('docusign_demo.consent_state', $state = Str::random(48));
         return redirect()->away($demo->consentUrl($state));
     }
