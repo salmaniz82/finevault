@@ -50,6 +50,7 @@ fs.mkdirSync(out, {recursive:true}); fs.mkdirSync(pdfOut, {recursive:true});
  await goto('/managers'); await page.screenshot({path:path.join(out,'manager-multiple-clients.png'),fullPage:true,animations:'disabled'});
  await login('manager'); await goto('/clients');
  if (!await page.getByText('evelyn.demo@fineworth.test',{exact:true}).count()) throw new Error('Second assigned client missing');
+ await login('admin');
  async function createDeal(type, clientLabel, reference) {
    await goto('/deals');
    const existing=page.locator('.document-row').filter({hasText:type==='wine'?'Château Margaux 2018 · signing-ready demo':'Bunnahabhain 2016 · signing-ready demo'});
@@ -81,7 +82,7 @@ fs.mkdirSync(out, {recursive:true}); fs.mkdirSync(pdfOut, {recursive:true});
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);
  if(overflow)throw new Error('Mobile page overflows horizontally');
  await page.setViewportSize({width:1440,height:1000});
- await login('manager');
+ await login('admin');
  // The existing display name may have been corrected through the earlier approval demo.
  await goto('/deals');
  const sophiaLabel=await page.locator('[name=client_id] option').filter({hasText:'Sophia'}).first().textContent();

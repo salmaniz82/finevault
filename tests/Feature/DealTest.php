@@ -40,7 +40,7 @@ class DealTest extends TestCase
 
     public function test_deal_generation_approval_client_review_and_private_access(): void
     {
-        $this->actingAs($this->user('manager'))->post('/deals', $this->payload())->assertSessionHasNoErrors();
+        $this->actingAs($this->user('admin'))->post('/deals', $this->payload())->assertSessionHasNoErrors();
         $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
         $this->assertSame(['stock' => 600000, 'markup' => 30000, 'management' => 15000, 'brokerage' => 12000, 'total' => 657000, 'deposit' => 150000, 'balance' => 507000], $deal->data['totals']);
         $this->get('/deals/'.$deal->id)->assertOk()->assertSee('GBP 5,070.00');
@@ -61,13 +61,12 @@ class DealTest extends TestCase
         $this->assertSame('reviewed', $deal->fresh()->data['status']);
         $this->actingAs($this->user('james'))->get('/deals/'.$deal->id)->assertNotFound();
         $this->get('/documents/'.$doc->id.'/download')->assertNotFound();
-        $this->actingAs($this->user('amelia'))->get('/deals/'.$deal->id)->assertNotFound();
+        $this->actingAs($this->user('amelia'))->get('/deals/'.$deal->id)->assertForbidden();
     }
 
     public function test_validation_and_assignment_isolation(): void
     {
-        $this->actingAs($this->user('manager'));
-        $this->post('/deals', array_replace($this->payload(), ['client_id' => $this->user('james')->id]))->assertNotFound();
+        $this->actingAs($this->user('admin'));
         $this->post('/deals', array_replace($this->payload(), ['brokerage_rate' => 99]))->assertSessionHasErrors('brokerage_rate');
         $this->post('/deals', array_replace($this->payload(), ['deposit' => '99999']))->assertSessionHasErrors('deposit');
         $this->post('/deals', array_replace($this->payload(), ['unit_price' => '1.123']))->assertSessionHasErrors('unit_price');
@@ -80,6 +79,7 @@ class DealTest extends TestCase
         $manager = $this->user('manager');
         $this->actingAs($this->user('admin'))->post('/clients/'.$this->user('james')->id.'/assign', ['manager_ids' => [$manager->id]])->assertRedirect();
         $this->actingAs($manager)->get('/clients')->assertSee('Sophia Bennett')->assertSee('James Whitmore');
+        $this->actingAs($this->user('admin'));
         $this->post('/deals', $this->payload())->assertSessionHasNoErrors();
         $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
         $this->post('/deals/'.$deal->id.'/generate');
@@ -102,9 +102,30 @@ class DealTest extends TestCase
         $this->get('/dashboard')->assertSee('2 items need attention');
     }
 
+    public function test_manager_cannot_view_or_change_deals_or_agreements(): void
+    {
+        $this->actingAs($this->user('admin'))->post('/deals', $this->payload());
+        $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
+        $this->post('/deals/'.$deal->id.'/generate');
+        $doc = $deal->fresh()->data['document_id'];
+        $this->post('/approvals/'.$doc, ['decision' => 'approved']);
+
+        $this->actingAs($this->user('manager'));
+        $this->get('/deals')->assertForbidden();
+        $this->get('/deals/'.$deal->id)->assertForbidden();
+        $this->post('/deals', $this->payload())->assertForbidden();
+        $this->post('/deals/'.$deal->id.'/generate')->assertForbidden();
+        $this->post('/deals/'.$deal->id.'/acknowledge', ['acknowledged' => 1])->assertForbidden();
+        $this->post('/deals/'.$deal->id.'/sign', ['sandbox_ack' => 1])->assertForbidden();
+        $this->post('/deals/'.$deal->id.'/signing-refresh')->assertForbidden();
+        $this->get('/documents/'.$doc.'/download')->assertNotFound();
+        $this->get('/documents')->assertDontSee('Deal FW-'.$deal->id);
+        $this->get('/dashboard')->assertDontSee('Deals to prepare')->assertDontSee('Prepare a deal');
+    }
+
     public function test_generated_deal_signing_requires_owner_and_verified_completion_before_publication(): void
     {
-        $this->actingAs($this->user('manager'))->post('/deals', $this->payload());
+        $this->actingAs($this->user('admin'))->post('/deals', $this->payload());
         $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
         $this->post('/deals/'.$deal->id.'/generate');
         $original = $deal->fresh()->data['document_id'];

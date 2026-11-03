@@ -18,6 +18,7 @@ class DealController extends Controller
 
     public function index(Request $request)
     {
+        abort_if($request->user()->role === 'manager', 403);
         return view('deals', ['title' => 'Deals & agreements', 'user' => $request->user(),
             'clients' => $this->portal->clients($request->user())->get(),
             'deals' => $this->portal->records($request->user(), 'deal')->latest()->get()]);
@@ -25,7 +26,7 @@ class DealController extends Controller
 
     public function store(Request $request)
     {
-        abort_if($request->user()->role === 'client', 403);
+        abort_unless($request->user()->role === 'admin', 403);
         $data = $request->validate([
             'client_id' => 'required|integer', 'type' => 'required|in:whisky,wine',
             'name' => 'required|string|max:160', 'reference' => 'required|string|max:80',
@@ -63,6 +64,7 @@ class DealController extends Controller
 
     public function show(Request $request, int $id)
     {
+        abort_if($request->user()->role === 'manager', 403);
         $deal = $this->portal->record($request->user(), $id, 'deal');
         $document = isset($deal->data['document_id']) ? $this->portal->record($request->user(), $deal->data['document_id'], 'document') : null;
         $signedDocument = isset($deal->data['signed_document_id']) ? $this->portal->records($request->user(), 'document')->find($deal->data['signed_document_id']) : null;
@@ -72,7 +74,7 @@ class DealController extends Controller
 
     public function generate(Request $request, int $id)
     {
-        abort_if($request->user()->role === 'client', 403);
+        abort_unless($request->user()->role === 'admin', 403);
         $this->portal->record($request->user(), $id, 'deal');
         $path = null;
         try {

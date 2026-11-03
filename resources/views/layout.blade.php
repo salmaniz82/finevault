@@ -9,7 +9,7 @@
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
         @php($navigation = ['dashboard'=>['Overview','grid'], 'holdings'=>['Holdings','bottle'], 'documents'=>['Documents','file'], 'requests'=>['Service requests','message']])
-        @php($navigation = array_slice($navigation,0,1,true) + ['deals'=>['Deals & agreements','file']] + array_slice($navigation,1,null,true))
+        @if(auth()->user()->role !== 'manager') @php($navigation = array_slice($navigation,0,1,true) + ['deals'=>['Deals & agreements','file']] + array_slice($navigation,1,null,true)) @endif
         @if(auth()->user()->role !== 'client') @php($navigation += ['clients'=>['Clients','users']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['managers'=>['Managers','shield'], 'approvals'=>['Review & approvals','check']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['signing-demo'=>['Signing demo','file']]) @endif

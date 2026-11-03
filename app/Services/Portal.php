@@ -26,6 +26,12 @@ class Portal
         if ($kind) {
             $query->where('kind', $kind);
         }
+        if ($user->role === 'manager') {
+            $query->where('kind', '!=', 'deal')
+                ->where(function ($q) {
+                    $q->where('kind', '!=', 'document')->orWhere('data->category', '!=', 'Agreement');
+                });
+        }
         if ($user->role === 'client') {
             $query->where(function ($q) {
                 $q->where('kind', '!=', 'deal')->orWhereIn('data->status', ['published', 'reviewed']);

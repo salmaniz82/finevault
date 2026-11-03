@@ -49,6 +49,7 @@ class DealSigningController extends Controller
 
     public function refresh(Request $request, int $id)
     {
+        abort_if($request->user()->role === 'manager', 403);
         $deal = $this->portal->record($request->user(), $id, 'deal');
         if ($request->isMethod('get')) {
             $state = $request->session()->pull('deal_signing.'.$id);

@@ -33,3 +33,4 @@
 @media(max-width:700px){.form-grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.card-head{flex-wrap:wrap;gap:10px}.stat-value{font-size:27px}}
 
 .file-copy p,.stat-top,.stat-bottom,.metadata small,.form-help,.breadcrumb{color:#62695f}
+.people-list table{min-width:760px}.people-list th,.people-list td{font-size:15px;line-height:1.55}.people-list td{white-space:normal}.people-list td:last-child{white-space:nowrap}.people-name{display:flex;align-items:center;gap:12px;min-width:180px}.people-name .avatar{flex-shrink:0}
