@@ -27,6 +27,9 @@ class Portal
             $query->where('kind', $kind);
         }
         if ($user->role === 'client') {
+            $query->where(function ($q) {
+                $q->where('kind', '!=', 'deal')->orWhereIn('data->status', ['published', 'reviewed']);
+            });
             $query->where('kind', '!=', 'profile');
             $query->where(function ($q) {
                 $q->where('kind', '!=', 'document')->orWhere(function ($q) {
@@ -56,6 +59,11 @@ class Portal
             abort_unless(in_array($record->kind, ['document', 'profile']) && $record->data['status'] === 'pending', 409);
             $data = array_merge($record->data, ['status' => $decision, 'reviewed_by' => $actor->name, 'reviewed_at' => now()->toIso8601String(), 'review_note' => $reason]);
             $record->update(['data' => $data]);
+            if ($record->kind === 'document' && isset($data['deal_id'])) {
+                $deal = PortalRecord::where('kind', 'deal')->lockForUpdate()->findOrFail($data['deal_id']);
+                abort_unless(($deal->data['document_id'] ?? null) === $record->id && $deal->client_id === $record->client_id, 409);
+                $deal->update(['data' => array_merge($deal->data, ['status' => $decision === 'approved' ? 'published' : 'rejected', 'review_note' => $reason])]);
+            }
             if ($record->kind === 'profile' && $decision === 'approved') {
                 User::findOrFail($record->client_id)->update(['name' => $data['name']]);
             }

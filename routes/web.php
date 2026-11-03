@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\DealController;
+use App\Http\Controllers\DealSigningController;
 use App\Http\Controllers\PortalController as Portal;
+use App\Http\Controllers\SigningDemoController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -9,15 +12,23 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [Portal::class, 'login'])->middleware('throttle:6,1');
 });
 Route::middleware('auth')->group(function () {
-    Route::get('/signing-demo', [\App\Http\Controllers\SigningDemoController::class, 'show']);
-    Route::get('/signing-demo/sample', [\App\Http\Controllers\SigningDemoController::class, 'sample']);
-    Route::post('/signing-demo/connect', [\App\Http\Controllers\SigningDemoController::class, 'connect']);
-    Route::get('/signing-demo/consent', [\App\Http\Controllers\SigningDemoController::class, 'consent']);
-    Route::post('/signing-demo/sign', [\App\Http\Controllers\SigningDemoController::class, 'sign'])->middleware('throttle:10,1')->block();
-    Route::get('/signing-demo/return', [\App\Http\Controllers\SigningDemoController::class, 'refresh'])->block();
-    Route::post('/signing-demo/refresh', [\App\Http\Controllers\SigningDemoController::class, 'refresh'])->block();
-    Route::get('/signing-demo/signed', [\App\Http\Controllers\SigningDemoController::class, 'download']);
-    Route::post('/signing-demo/reset', [\App\Http\Controllers\SigningDemoController::class, 'reset'])->block();
+    Route::get('/deals', [DealController::class, 'index']);
+    Route::post('/deals/{id}/sign', [DealSigningController::class, 'sign'])->whereNumber('id')->middleware('throttle:10,1')->block();
+    Route::get('/deals/{id}/signing-return', [DealSigningController::class, 'refresh'])->whereNumber('id')->block();
+    Route::post('/deals/{id}/signing-refresh', [DealSigningController::class, 'refresh'])->whereNumber('id')->middleware('throttle:10,1')->block();
+    Route::post('/deals', [DealController::class, 'store']);
+    Route::get('/deals/{id}', [DealController::class, 'show'])->whereNumber('id');
+    Route::post('/deals/{id}/generate', [DealController::class, 'generate'])->whereNumber('id')->block();
+    Route::post('/deals/{id}/acknowledge', [DealController::class, 'acknowledge'])->whereNumber('id');
+    Route::get('/signing-demo', [SigningDemoController::class, 'show']);
+    Route::get('/signing-demo/sample', [SigningDemoController::class, 'sample']);
+    Route::post('/signing-demo/connect', [SigningDemoController::class, 'connect']);
+    Route::get('/signing-demo/consent', [SigningDemoController::class, 'consent']);
+    Route::post('/signing-demo/sign', [SigningDemoController::class, 'sign'])->middleware('throttle:10,1')->block();
+    Route::get('/signing-demo/return', [SigningDemoController::class, 'refresh'])->block();
+    Route::post('/signing-demo/refresh', [SigningDemoController::class, 'refresh'])->block();
+    Route::get('/signing-demo/signed', [SigningDemoController::class, 'download']);
+    Route::post('/signing-demo/reset', [SigningDemoController::class, 'reset'])->block();
     Route::post('/onboarding/{id}/acknowledge', [Portal::class, 'acknowledge']);
     Route::post('/logout', [Portal::class, 'logout']);
     Route::post('/accounts', [Portal::class, 'user']);

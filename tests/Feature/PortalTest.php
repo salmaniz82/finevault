@@ -216,7 +216,12 @@ class PortalTest extends TestCase
         $this->assertArrayNotHasKey('abv', $wine->data);
         foreach (['admin', 'manager', 'client'] as $role) {
             $this->actingAs($this->actor($role))->get('/holding/'.$wine->id)->assertOk()->assertSee('3 bottles')->assertSee('1,500 mL / bottle')->assertSee('4.5 L wine');
-            $this->get('/dashboard')->assertSee('69 bottles')->assertSee('54 L recorded')->assertSee($role === 'admin' ? '3 casks' : '2 casks');
+            if ($role === 'client') {
+                $this->get('/dashboard')->assertSee('69 bottles')->assertSee('54 L recorded')->assertSee('2 casks');
+            } else {
+                $this->get('/holdings')->assertSee('69 bottles')->assertSee($role === 'admin' ? '3 casks' : '2 casks');
+                $this->get('/dashboard')->assertSee('items need attention');
+            }
         }
         $payload['type'] = 'whisky';
         $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasErrors('quantity');

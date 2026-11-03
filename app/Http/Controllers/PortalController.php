@@ -36,6 +36,7 @@ class PortalController extends Controller
             'client_id' => $request->user()->id, 'kind' => 'onboarding_ack',
             'data->document_id' => $document->id,
         ], ['data' => ['document_id' => $document->id, 'acknowledged_at' => now()->toIso8601String()]]);
+
         return back()->with('success', 'Document review recorded. Your team will confirm the next step.');
     }
 
@@ -139,6 +140,10 @@ class PortalController extends Controller
     {
         $record = $this->portal->record($request->user(), $id, 'document');
         abort_unless(Storage::disk('local')->exists($record->data['path']), 404);
+
+        if ($request->boolean('view') && strtolower(pathinfo($record->data['path'], PATHINFO_EXTENSION)) === 'pdf') {
+            return Storage::disk('local')->response($record->data['path'], $record->data['original_name'], ['Content-Type' => 'application/pdf', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
+        }
 
         return Storage::disk('local')->download($record->data['path'], $record->data['original_name'], ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
     }

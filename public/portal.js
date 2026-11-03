@@ -84,3 +84,28 @@ if (requestForm) {
     holding.addEventListener('change', refresh); refresh();
 }
 
+const dealForm = document.querySelector('[data-deal-form]');
+if (dealForm) {
+    const type = dealForm.querySelector('[data-deal-type]');
+    const refreshDeal = () => {
+        const whisky = type.value === 'whisky';
+        dealForm.querySelectorAll('[data-deal-fields]').forEach(group => {
+            group.hidden = group.dataset.dealFields !== type.value;
+            group.querySelectorAll('input').forEach(input => input.disabled = group.hidden);
+        });
+        const quantity = dealForm.elements.quantity;
+        quantity.max = whisky ? '1' : '100000';
+        quantity.readOnly = whisky;
+        if (whisky) quantity.value = '1';
+        dealForm.querySelector('[data-deal-quantity]').textContent = whisky ? 'Quantity (one referenced cask)' : 'Quantity (total bottles)';
+        const stock = Math.round(Number(dealForm.elements.unit_price.value) * 100) * Number(quantity.value);
+        const fees = ['markup','management','brokerage'].map(key => Math.round(stock * Number(dealForm.elements[key+'_rate'].value) / 100));
+        const total = stock + fees.reduce((a,b) => a+b,0);
+        const balance = total - Math.round(Number(dealForm.elements.deposit.value) * 100);
+        const money = pennies => new Intl.NumberFormat('en-GB', {style:'currency',currency:'GBP'}).format(pennies/100);
+        dealForm.querySelector('[data-deal-preview]').textContent = `Preview: stock ${money(stock)} + fees ${money(total-stock)} = ${money(total)}. Balance after deposit: ${money(balance)}. Final amounts are calculated on the server.`;
+    };
+    dealForm.addEventListener('input', refreshDeal);
+    dealForm.addEventListener('change', refreshDeal);
+    refreshDeal();
+}

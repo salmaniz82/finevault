@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -9,16 +10,19 @@ use RuntimeException;
 class DocusignDemo
 {
     public const NAME = 'Alexander Morgan';
+
     public const EMAIL = 'alexander.morgan@example.com';
+
     public const CLIENT_ID = 'fineworth-fictional-signer';
 
-    private function http(): \Illuminate\Http\Client\PendingRequest
+    private function http(): PendingRequest
     {
         // Use an explicitly configured trusted bundle; never disable TLS checks.
         $bundle = config('docusign.ca_bundle');
         if ($bundle && (! is_string($bundle) || ! is_file($bundle) || ! is_readable($bundle))) {
             throw new RuntimeException('DOCUSIGN_CA_BUNDLE must point to a readable CA file on this server. Leave it empty to use the server\'s default trusted certificates.');
         }
+
         return Http::withOptions(['verify' => $bundle ?: true]);
     }
 
@@ -46,6 +50,7 @@ class DocusignDemo
         if (! filter_var(config('docusign.redirect_uri'), FILTER_VALIDATE_URL) || ! in_array(parse_url(config('docusign.redirect_uri'), PHP_URL_SCHEME), ['http', 'https'])) {
             $issues[] = 'DOCUSIGN_REDIRECT_URI must be the full HTTP or HTTPS consent callback URL registered with DocuSign.';
         }
+
         return $issues;
     }
 
@@ -71,6 +76,7 @@ class DocusignDemo
         if (! $this->ready()) {
             throw new RuntimeException(implode(' ', $this->configurationIssues()));
         }
+
         return Cache::remember('docusign-demo-token-'.hash('sha256', config('docusign.integration_key').config('docusign.user_id')), 3000, function () {
             $encode = fn ($value) => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
             $jwt = $encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])).'.'.$encode(json_encode([
@@ -93,6 +99,7 @@ class DocusignDemo
             if (! is_string($token) || $token === '') {
                 throw new RuntimeException('DocuSign did not return an access token.');
             }
+
             return $token;
         });
     }
@@ -105,6 +112,7 @@ class DocusignDemo
         if (! $response->successful()) {
             throw new RuntimeException('DocuSign could not complete the sandbox request (HTTP '.$response->status().'). Please retry or check the sandbox account configuration.');
         }
+
         return $response;
     }
 
@@ -132,6 +140,7 @@ class DocusignDemo
         if (! is_string($id) || ! preg_match('/^[a-f0-9-]{36}$/i', $id)) {
             throw new RuntimeException('DocuSign did not return a valid envelope reference.');
         }
+
         return $id;
     }
 
@@ -144,6 +153,40 @@ class DocusignDemo
         if (! is_string($url) || parse_url($url, PHP_URL_SCHEME) !== 'https' || ! preg_match('/(^|\.)docusign\.(net|com)$/i', parse_url($url, PHP_URL_HOST) ?? '')) {
             throw new RuntimeException('DocuSign returned an unexpected signing address.');
         }
+
+        return $url;
+    }
+
+    public function createDealEnvelope(string $pdf, string $name, string $email, string $clientId): string
+    {
+        $id = $this->api('POST', '/envelopes', [
+            'emailSubject' => 'DEMONSTRATION ONLY - Fineworth deal agreement', 'status' => 'sent',
+            'documents' => [['documentBase64' => base64_encode($pdf), 'name' => 'Fineworth generated agreement', 'fileExtension' => 'pdf', 'documentId' => '1']],
+            'recipients' => ['signers' => [[
+                'email' => $email, 'name' => $name, 'recipientId' => '1', 'clientUserId' => $clientId,
+                'tabs' => [
+                    'signHereTabs' => [['anchorString' => '/fw_signature/', 'anchorUnits' => 'pixels', 'anchorXOffset' => '0', 'anchorYOffset' => '-25', 'anchorIgnoreIfNotPresent' => 'false']],
+                    'dateSignedTabs' => [['anchorString' => '/fw_date/', 'anchorUnits' => 'pixels', 'anchorXOffset' => '0', 'anchorYOffset' => '-10', 'anchorIgnoreIfNotPresent' => 'false']],
+                ],
+            ]]],
+        ])->json('envelopeId');
+        if (! is_string($id) || ! preg_match('/^[a-f0-9-]{36}$/i', $id)) {
+            throw new RuntimeException('DocuSign did not return a valid envelope reference.');
+        }
+
+        return $id;
+    }
+
+    public function dealSigningUrl(string $id, string $returnUrl, string $name, string $email, string $clientId): string
+    {
+        $url = $this->api('POST', '/envelopes/'.$id.'/views/recipient', [
+            'returnUrl' => $returnUrl, 'authenticationMethod' => 'none', 'email' => $email,
+            'userName' => $name, 'recipientId' => '1', 'clientUserId' => $clientId,
+        ])->json('url');
+        if (! is_string($url) || parse_url($url, PHP_URL_SCHEME) !== 'https' || ! preg_match('/(^|\.)docusign\.(net|com)$/i', parse_url($url, PHP_URL_HOST) ?? '')) {
+            throw new RuntimeException('DocuSign returned an unexpected signing address.');
+        }
+
         return $url;
     }
 
@@ -157,6 +200,7 @@ class DocusignDemo
         if ($this->status($id) !== 'completed') {
             throw new RuntimeException('The signed PDF is available after DocuSign confirms completion.');
         }
+
         return $this->api('GET', '/envelopes/'.$id.'/documents/combined')->body();
     }
 }

@@ -1,0 +1,37 @@
+name: Deploy Laravel Application to Development Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Changes and Deploy
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH }}
+        with:
+          host: ${{ vars.HOSTINGER_HOST }}
+          username: ${{ vars.HOSTINGER_SSH_USERNAME }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          port: 65002
+          envs: DEPLOY_PATH
+          script: |
+            set -e
+
+            cd "$DEPLOY_PATH"
+
+            shopt -s expand_aliases
+            alias composer='/opt/alt/php83/usr/bin/php /usr/local/bin/composer2'
+            alias php='/opt/alt/php83/usr/bin/php'
+
+            git pull origin main
+
+            composer dump-autoload -o --no-dev
+            php artisan migrate --force
+            php artisan optimize:clear
+            php artisan optimize

@@ -35,6 +35,30 @@ class SigningDemoTest extends TestCase
         return User::where('email', $role.'@fineworth.test')->firstOrFail();
     }
 
+    public function test_generated_agreement_uses_its_own_pdf_signer_and_separate_anchor_fields(): void
+    {
+        Http::fake([
+            '*/envelopes' => Http::response(['envelopeId' => self::ENVELOPE]),
+            '*/views/recipient' => Http::response(['url' => 'https://demo.docusign.net/Signing/generated']),
+        ]);
+        $service = app(DocusignDemo::class);
+        $this->assertSame(self::ENVELOPE, $service->createDealEnvelope('%PDF-1.4 generated', 'Evelyn Hart', 'evelyn@example.test', 'deal-22-client-6'));
+        $service->dealSigningUrl(self::ENVELOPE, 'http://127.0.0.1:8000/deals/22/signing-return?state=test', 'Evelyn Hart', 'evelyn@example.test', 'deal-22-client-6');
+        Http::assertSent(function ($request) {
+            if (! str_ends_with($request->url(), '/envelopes')) {
+                return false;
+            }
+            $signer = $request['recipients']['signers'][0];
+
+            return base64_decode($request['documents'][0]['documentBase64']) === '%PDF-1.4 generated'
+                && $signer['email'] === 'evelyn@example.test'
+                && $signer['clientUserId'] === 'deal-22-client-6'
+                && $signer['tabs']['signHereTabs'][0]['anchorString'] === '/fw_signature/'
+                && $signer['tabs']['dateSignedTabs'][0]['anchorString'] === '/fw_date/';
+        });
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/views/recipient') && $request['clientUserId'] === 'deal-22-client-6');
+    }
+
     private function configureEphemeralSigningKey(): string
     {
         $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA, 'config' => base_path('tests/Fixtures/openssl.cnf')]);
@@ -43,6 +67,7 @@ class SigningDemoTest extends TestCase
         Storage::disk('local')->put('test-signing.key', $private);
         config(['docusign.private_key_path' => Storage::disk('local')->path('test-signing.key')]);
         Cache::forget('docusign-demo-token-'.hash('sha256', 'test-keytest-user'));
+
         return openssl_pkey_get_details($key)['key'];
     }
 
@@ -124,13 +149,15 @@ class SigningDemoTest extends TestCase
             '*/envelopes/'.self::ENVELOPE => Http::response(['status' => 'sent']),
             '*/views/recipient' => Http::response(['url' => 'https://demo.docusign.net/signing/test']),
         ]);
-        $users = User::count(); $records = PortalRecord::count();
+        $users = User::count();
+        $records = PortalRecord::count();
         $this->actingAs($this->actor('admin'));
         $this->get('/signing-demo')->assertOk()->assertSee('Alexander Morgan')->assertSee('View sample PDF')->assertDontSee('<object', false)->assertDontSee('Document preview');
         $this->get('/signing-demo/sample')->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertHeader('X-Frame-Options', 'DENY');
         $this->post('/signing-demo/sign')->assertRedirect('https://demo.docusign.net/signing/test');
         $this->post('/signing-demo/sign')->assertRedirect('https://demo.docusign.net/signing/test');
-        $this->assertSame($users, User::count()); $this->assertSame($records, PortalRecord::count());
+        $this->assertSame($users, User::count());
+        $this->assertSame($records, PortalRecord::count());
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/envelopes')));
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/envelopes') && $r['recipients']['signers'][0]['clientUserId'] === DocusignDemo::CLIENT_ID && str_starts_with(base64_decode($r['documents'][0]['documentBase64']), '%PDF-'));
     }
