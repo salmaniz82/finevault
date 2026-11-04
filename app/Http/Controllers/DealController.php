@@ -56,7 +56,7 @@ class DealController extends Controller
             throw ValidationException::withMessages(['deposit' => 'Deposit cannot exceed the total agreement amount.']);
         }
         $data += ['status' => 'draft', 'client_name' => $client->name, 'client_email' => $client->email,
-            'created_by' => $request->user()->name, 'created_at' => now()->toIso8601String(), 'template_version' => 'demo-2026-11-03-v2'];
+            'created_by' => $request->user()->name, 'created_at' => now()->toIso8601String(), 'template_version' => DealAgreement::TEMPLATE_VERSION];
         $deal = PortalRecord::create(['client_id' => $client->id, 'kind' => 'deal', 'data' => $data]);
 
         return redirect('/deals/'.$deal->id)->with('success', 'Deal draft saved. Generate its agreement to send it for admin review.');
@@ -82,12 +82,15 @@ class DealController extends Controller
                 $deal = PortalRecord::lockForUpdate()->findOrFail($id);
                 abort_unless($deal->data['status'] === 'draft', 409);
                 $data = $deal->data;
+                $data['template_version'] = DealAgreement::TEMPLATE_VERSION;
                 $path = 'agreements/'.Str::uuid().'.pdf';
-                abort_unless(Storage::disk('local')->put($path, $this->agreements->pdf($data, $id)), 500);
+                $generated = $this->agreements->generate($data, $id);
+                abort_unless(Storage::disk('local')->put($path, $generated['pdf']), 500);
                 $document = PortalRecord::create(['client_id' => $deal->client_id, 'kind' => 'document', 'data' => [
                     'title' => 'Deal FW-'.$id.' — '.$data['name'], 'category' => 'Agreement',
                     'document_date' => now()->toDateString(), 'status' => 'pending', 'visibility' => 'client',
                     'path' => $path, 'original_name' => 'fineworth-deal-'.$id.'.pdf', 'series' => (string) Str::uuid(),
+                    'signing_hotspots' => $generated['hotspots'],
                     'uploaded_by' => $request->user()->name, 'uploaded_by_id' => $request->user()->id,
                     'deal_id' => $id, 'notes' => 'Generated from a frozen deal snapshot. Verify client, stock, deposit and fee basis before publication.',
                 ]]);

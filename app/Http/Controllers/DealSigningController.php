@@ -19,7 +19,7 @@ class DealSigningController extends Controller
     {
         abort_unless($request->user()->role === 'client', 403);
         $deal = $this->portal->record($request->user(), $id, 'deal');
-        abort_unless(($deal->data['template_version'] ?? '') === 'demo-2026-11-03-v2', 409, 'Create a new agreement using the signing-ready template.');
+        abort_unless(in_array($deal->data['template_version'] ?? '', ['demo-2026-11-03-v2', \App\Services\DealAgreement::TEMPLATE_VERSION]), 409, 'Create a new agreement using the signing-ready template.');
         $request->validate(['sandbox_ack' => 'accepted']);
         $document = $this->portal->record($request->user(), $deal->data['document_id'], 'document');
         abort_unless(($document->data['status'] ?? '') === 'approved', 409);

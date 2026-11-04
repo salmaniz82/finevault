@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
 class DealAgreement
 {
+    public const TEMPLATE_VERSION = 'demo-2026-11-04-v3';
     // Demonstration options, not approved commercial rates. Basis: net stock subtotal.
     public const RATES = [0, 1, 2, 2.5, 5, 10];
 
@@ -36,16 +34,11 @@ class DealAgreement
 
     public function pdf(array $data, int $id): string
     {
-        $options = new Options;
-        $options->set('isRemoteEnabled', false);
-        $options->set('isPhpEnabled', false);
-        $options->set('defaultFont', 'DejaVu Sans');
-        $options->set('chroot', resource_path('views/agreements'));
-        $pdf = new Dompdf($options);
-        $pdf->loadHtml(view('agreements.deal', compact('data', 'id'))->render());
-        $pdf->setPaper('A4');
-        $pdf->render();
+        return $this->generate($data, $id)['pdf'];
+    }
 
-        return $pdf->output();
+    public function generate(array $data, int $id): array
+    {
+        return app(SigningDocument::class)->generate(view('agreements.deal', compact('data', 'id'))->render());
     }
 }

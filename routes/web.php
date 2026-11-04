@@ -12,6 +12,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [Portal::class, 'login'])->middleware('throttle:6,1');
 });
 Route::middleware('auth')->group(function () {
+    Route::get('/direct-signing-demo', [\App\Http\Controllers\DirectSigningController::class, 'show'])->block();
+    Route::get('/direct-signing-demo/sample', [\App\Http\Controllers\DirectSigningController::class, 'sample']);
+    Route::post('/direct-signing-demo/save', [\App\Http\Controllers\DirectSigningController::class, 'save'])->middleware('throttle:10,1')->block();
+    Route::post('/direct-signing-demo/reset', [\App\Http\Controllers\DirectSigningController::class, 'reset'])->block();
+    Route::get('/direct-signing-demo/{id}/download', [\App\Http\Controllers\DirectSigningController::class, 'download'])->whereNumber('id');
     Route::get('/deals', [DealController::class, 'index']);
     Route::post('/deals/{id}/sign', [DealSigningController::class, 'sign'])->whereNumber('id')->middleware('throttle:10,1')->block();
     Route::get('/deals/{id}/signing-return', [DealSigningController::class, 'refresh'])->whereNumber('id')->block();

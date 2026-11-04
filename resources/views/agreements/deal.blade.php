@@ -19,6 +19,6 @@
 <p>Fineworth prepares this illustrative acquisition record for the named client and stock. Each fee is calculated once on the stock subtotal, rounded to the nearest penny, and then added to it. Markup is shown separately. No fee is compounded or recurring in this example.</p>
 <p>The deposit is a staff-entered record of an external payment; the portal neither collects nor verifies funds. The remaining balance is the agreement total less that deposit, due on the date above. Tax, duties, storage, insurance and cancellation terms are not modelled and require approved wording before commercial use.</p>
 <p>Publication means an administrator reviewed the document. Client review acknowledgement is not a legal signature, ownership transfer or confirmation of full payment. Electronic signing, when demonstrated, uses DocuSign sandbox only.</p>
-<table style="margin-top:24px"><tr><td style="height:48px;color:white">/fw_signature/</td><td style="color:white">/fw_date/</td></tr><tr><td>Client signature</td><td>Date signed</td></tr></table>
+@include('agreements.signing-block')
 <p class="foot">Prepared by {{ $data['created_by'] }} · {{ $data['created_at'] }}<br>Fictional demonstration only. No guaranteed return, valuation or production contract is represented.</p></div>
 </body></html>

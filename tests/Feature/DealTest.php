@@ -47,6 +47,8 @@ class DealTest extends TestCase
         $this->post('/deals/'.$deal->id.'/generate')->assertSessionHasNoErrors();
         $doc = PortalRecord::findOrFail($deal->fresh()->data['document_id']);
         $this->assertStringStartsWith('%PDF-', Storage::disk('local')->get($doc->data['path']));
+        $this->assertSame(hash('sha256', Storage::disk('local')->get($doc->data['path'])), $doc->data['signing_hotspots']['source_sha256']);
+        $this->assertArrayHasKey('full_name', $doc->data['signing_hotspots']['fields']);
         $this->post('/deals/'.$deal->id.'/generate')->assertStatus(409);
         $this->actingAs($this->user('client'))->get('/deals/'.$deal->id)->assertNotFound();
         $this->get('/deals')->assertDontSee('FW-W-DEMO-24');

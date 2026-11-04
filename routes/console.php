@@ -18,6 +18,16 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
+Artisan::command('signing:build-samples', function () {
+    foreach (['standard', 'extended'] as $variant) {
+        $generated = app(\App\Services\SigningDocument::class)->generate(view('agreements.direct-demo', ['extended' => $variant === 'extended'])->render());
+        $path = resource_path('demo/direct-'.$variant.'.pdf');
+        file_put_contents($path, $generated['pdf']);
+        file_put_contents($path.'.json', json_encode($generated['hotspots'], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
+        $this->info($variant.': '.$generated['hotspots']['page_count'].' pages; signing page '.$generated['hotspots']['fields']['signature']['page']);
+    }
+})->purpose('Rebuild fictional direct-signing PDFs and their measured hotspot maps');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

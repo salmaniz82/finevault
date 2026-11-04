@@ -13,6 +13,7 @@
         @if(auth()->user()->role !== 'client') @php($navigation += ['clients'=>['Clients','users']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['managers'=>['Managers','shield'], 'approvals'=>['Review & approvals','check']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['signing-demo'=>['Signing demo','file']]) @endif
+        @if(auth()->user()->role === 'admin') @php($navigation += ['direct-signing-demo'=>['Direct signing demo','file']]) @endif
         @foreach($navigation as $path => [$label, $icon])
         <a href="/{{ $path }}" class="{{ request()->segment(1) === $path || ($path === 'holdings' && request()->segment(1) === 'holding') || ($path === 'clients' && request()->segment(1) === 'client') ? 'active' : '' }}">@include('parts.icon', ['name'=>$icon]) {{ $label }} @if($path === 'approvals' && isset($records) && $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count())<span class="nav-count">{{ $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count() }}</span>@endif</a>
         @endforeach

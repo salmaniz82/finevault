@@ -1,0 +1,32 @@
+{
+    "version": 1,
+    "units": "pt",
+    "origin": "top-left",
+    "source_sha256": "2acc89e3ea5ee6a907ea1f7b5b8a215a419fba566a1217251c571820b25b9dc0",
+    "page_count": 1,
+    "page_width": 595.28,
+    "page_height": 841.89,
+    "fields": {
+        "signature": {
+            "page": 1,
+            "x": 40,
+            "y": 596.3934,
+            "width": 208,
+            "height": 52
+        },
+        "signed_date": {
+            "page": 1,
+            "x": 323.404,
+            "y": 628.3934,
+            "width": 150,
+            "height": 20
+        },
+        "full_name": {
+            "page": 1,
+            "x": 40,
+            "y": 680.0200000000001,
+            "width": 360,
+            "height": 24
+        }
+    }
+}
