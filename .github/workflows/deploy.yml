@@ -31,7 +31,7 @@ jobs:
 
             git pull origin main
 
-            composer dump-autoload -o --no-dev
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
             php artisan migrate --force
             php artisan optimize:clear
             php artisan optimize

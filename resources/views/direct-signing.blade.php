@@ -29,7 +29,7 @@
 <p id="sign-error" role="alert"></p><button class="primary" id="save-signature" disabled>Save signed agreement →</button>
 <p class="form-help">Completion is recorded only after the signed PDF is saved successfully.</p>
 </div></section></div></form>
-<script type="module" src="/direct-signing.js"></script>
+<script type="module" src="/direct-signing.js?v={{ hash_file('sha256', public_path('direct-signing.js')) }}"></script>
 @endif
 @if($history->isNotEmpty())<section class="card" style="margin-top:24px"><div class="card-head"><h2>Saved demonstrations</h2><span>Latest 10</span></div><div class="card-content">@foreach($history as $entry)<p><a class="text-link" href="/direct-signing-demo/{{ $entry->id }}/download">{{ $entry->data['name'] }} · {{ $entry->data['signed_at'] }} UTC · Download PDF ↓</a></p>@endforeach</div></section>@endif
 @endsection

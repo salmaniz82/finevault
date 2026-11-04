@@ -1,5 +1,3 @@
-import * as pdfjs from '/vendor/pdfjs/pdf.mjs';
-pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.mjs';
 const el = id => document.getElementById(id);
 const pad = el('signature-pad'), ctx = pad.getContext('2d'), sheet = el('pdf-sheet'), placed = el('placed-signature');
 let pdf, ready = false, ink = false, drawing = false, renderId = 0;
@@ -122,9 +120,15 @@ el('signature-form').addEventListener('submit', event => {
 });
 typed();
 try {
+    const revision = new URL(import.meta.url).search;
+    const pdfjs = await import('/vendor/pdfjs/pdf.mjs' + revision);
+    pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.mjs' + revision;
     pdf = await pdfjs.getDocument({ url: '/direct-signing-demo/sample', isEvalSupported: false, standardFontDataUrl: '/vendor/pdfjs/standard_fonts/' }).promise;
     el('pdf-page').replaceChildren(...Array.from({length:pdf.numPages}, (_,i) => new Option(String(i+1), String(i+1))));
     el('pdf-page').value = String(hotspots.fields.signature.page); await renderPage();
-} catch { el('pdf-status').textContent = 'PDF preview could not load. Reload to try again.'; }
+} catch (error) {
+    console.error('Direct signing preview failed to load:', error);
+    el('pdf-status').textContent = 'PDF preview could not load. Reload to try again, or use Open original to view the agreement.';
+}
 
 

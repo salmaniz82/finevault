@@ -22,6 +22,10 @@ New PDFs use template v3. Already generated PDFs and signed copies are not rewri
 
 ## Dependencies and checks
 
+Hostinger deployment uses the GitHub Actions workflow on pushes to `main`. The workflow pulls the tracked browser assets and installs PHP dependencies from `composer.lock`. It needs no Node, npm, or Vite build on the server. Keep the web root pointed at Laravel's `public/` directory.
+
+If the live page stalls on **Loading agreement…**, check the Network response headers for `/vendor/pdfjs/pdf.mjs` and `/vendor/pdfjs/pdf.worker.mjs`. Both must return HTTP 200 and a JavaScript content type, such as `text/javascript`. The public `.htaccess` sets this for `.mjs` on Apache/LiteSpeed. A 200 response with `text/plain` still blocks the module. After deploying, reload the demo and check that it displays the page number.
+
 Run `composer install`; enable PHP GD. PDF.js and signature fonts are locally served committed assets, so no Node build is required for this screen. npm dependencies are pinned with licences copied alongside browser assets.
 
 `php artisan test --compact` verifies generation, pagination, hash binding, missing-hotspot failure, private ownership, duplicate-save handling, forged-coordinate rejection and existing portal/DocuSign flows. On 4 November 2026: 43 tests, 412 assertions passed. Browser check: extended PDF showed all three fields on page 4 and saved successfully.
