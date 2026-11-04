@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\PortalRecord;
+use App\Models\Holding;
+use App\Models\PortalEntry;
 use App\Models\User;
 use App\Services\HoldingMeasurements;
 use Database\Seeders\PrototypeSeeder;
@@ -34,11 +35,11 @@ class PortalTest extends TestCase
         $this->get('/login')->assertOk()->assertSee('Welcome back.');
         foreach (['admin', 'manager', 'client'] as $role) {
             $this->actingAs($this->actor($role));
-            foreach (['dashboard', 'holdings', 'documents', 'requests', 'account', 'holding/1'] as $path) {
+            foreach (['dashboard', 'holdings', 'documents', 'requests', 'account', 'holding/'.Holding::where('reference', 'FW-C4188')->value('id')] as $path) {
                 $this->get('/'.$path)->assertOk();
             }
             if ($role !== 'client') {
-                foreach (['clients', 'client/4'] as $path) {
+                foreach (['clients', 'client/'.$this->actor('client')->id] as $path) {
                     $this->get('/'.$path)->assertOk();
                 }
             }
@@ -83,7 +84,7 @@ class PortalTest extends TestCase
 
     public function test_clients_and_managers_cannot_access_other_clients(): void
     {
-        $otherHolding = PortalRecord::where('client_id', $this->actor('other')->id)->where('kind', 'holding')->first();
+        $otherHolding = PortalEntry::where('client_id', $this->actor('other')->id)->where('kind', 'holding')->first();
         foreach (['client', 'manager'] as $role) {
             $this->actingAs($this->actor($role));
             $this->get('/holding/'.$otherHolding->id)->assertNotFound();
@@ -96,9 +97,9 @@ class PortalTest extends TestCase
 
     public function test_private_documents_are_hidden_and_downloads_authorized(): void
     {
-        $pending = PortalRecord::where('kind', 'document')->where('data->status', 'pending')->first();
-        $kyc = PortalRecord::where('kind', 'document')->where('data->category', 'KYC')->first();
-        $approved = PortalRecord::where('kind', 'document')->where('data->category', 'Ownership')->first();
+        $pending = PortalEntry::where('kind', 'document')->whereField('status', 'pending')->first();
+        $kyc = PortalEntry::where('kind', 'document')->whereField('category', 'KYC')->first();
+        $approved = PortalEntry::where('kind', 'document')->whereField('category', 'Ownership')->first();
         $this->actingAs($this->actor('client'))->get('/documents')->assertDontSee('Annual regauge report')->assertDontSee('Identity verification record');
         foreach ([$pending, $kyc] as $doc) {
             $this->get('/documents/'.$doc->id.'/download')->assertNotFound();
@@ -110,9 +111,9 @@ class PortalTest extends TestCase
     public function test_document_upload_approval_replacement_and_immutable_history(): void
     {
         $client = $this->actor('client');
-        $payload = ['client_id' => $client->id, 'holding_id' => 1, 'title' => 'Fresh report', 'category' => 'Regauge', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'notes' => 'Measured at the warehouse.', 'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf')];
+        $payload = ['client_id' => $client->id, 'holding_id' => Holding::where('reference', 'FW-C4188')->value('id'), 'title' => 'Fresh report', 'category' => 'Regauge', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'notes' => 'Measured at the warehouse.', 'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf')];
         $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertRedirect()->assertSessionHasNoErrors();
-        $doc = PortalRecord::latest('id')->first();
+        $doc = PortalEntry::latest('id')->first();
         $this->assertSame('pending', $doc->data['status']);
         Storage::disk('local')->assertExists($doc->data['path']);
         $this->actingAs($client)->get('/documents/'.$doc->id.'/download')->assertNotFound();
@@ -124,7 +125,7 @@ class PortalTest extends TestCase
         $payload['title'] = 'Updated report';
         $payload['file'] = UploadedFile::fake()->create('updated.pdf', 20, 'application/pdf');
         $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertSessionHasNoErrors();
-        $next = PortalRecord::latest('id')->first();
+        $next = PortalEntry::latest('id')->first();
         $this->assertSame($doc->data['series'], $next->data['series']);
         $this->actingAs($this->actor('admin'))->post('/approvals/'.$next->id, ['decision' => 'approved'])->assertRedirect();
         $this->post('/approvals/'.$doc->id, ['decision' => 'rejected', 'reason' => 'Cannot undo approval'])->assertStatus(409);
@@ -136,14 +137,14 @@ class PortalTest extends TestCase
         $payload = ['client_id' => $this->actor('other')->id, 'title' => 'Wrong owner', 'category' => 'Ownership', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf')];
         $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertNotFound();
         $payload['client_id'] = $this->actor('client')->id;
-        $payload['holding_id'] = 7;
+        $payload['holding_id'] = Holding::where('reference', 'FW-C7011')->value('id');
         $this->actingAs($this->actor('admin'))->post('/documents', $payload)->assertUnprocessable();
     }
 
     public function test_kyc_is_staff_only_even_when_client_visibility_requested(): void
     {
         $this->actingAs($this->actor('manager'))->post('/documents', ['client_id' => $this->actor('client')->id, 'title' => 'Secure identity', 'category' => 'KYC', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('identity.pdf', 20, 'application/pdf')])->assertSessionHasNoErrors();
-        $doc = PortalRecord::latest('id')->first();
+        $doc = PortalEntry::latest('id')->first();
         $this->assertSame('staff', $doc->data['visibility']);
         $this->actingAs($this->actor('admin'))->post('/approvals/'.$doc->id, ['decision' => 'approved']);
         $this->actingAs($this->actor('client'))->get('/documents/'.$doc->id.'/download')->assertNotFound();
@@ -151,13 +152,13 @@ class PortalTest extends TestCase
 
     public function test_request_flow_and_asset_service_validation(): void
     {
-        $this->actingAs($this->actor('client'))->post('/requests', ['holding_id' => 1, 'type' => 'Regauge', 'notes' => 'Please measure the cask.'])->assertSessionHasNoErrors();
-        $request = PortalRecord::latest('id')->first();
+        $this->actingAs($this->actor('client'))->post('/requests', ['holding_id' => Holding::where('reference', 'FW-C4188')->value('id'), 'type' => 'Regauge', 'notes' => 'Please measure the cask.'])->assertSessionHasNoErrors();
+        $request = PortalEntry::latest('id')->first();
         $this->post('/requests/'.$request->id, ['status' => 'completed'])->assertForbidden();
         $this->actingAs($this->actor('manager'))->post('/requests/'.$request->id, ['status' => 'completed', 'staff_note' => 'Report received.'])->assertSessionHasNoErrors();
         $this->actingAs($this->actor('client'))->get('/requests')->assertSee('Report received.')->assertSee('completed');
-        $this->post('/requests', ['holding_id' => 3, 'type' => 'Regauge', 'notes' => 'Wine cannot be regauged.'])->assertUnprocessable();
-        $this->post('/requests', ['holding_id' => 7, 'type' => 'Evaluation', 'notes' => 'Not my holding.'])->assertNotFound();
+        $this->post('/requests', ['holding_id' => Holding::where('reference', 'FW-W1024')->value('id'), 'type' => 'Regauge', 'notes' => 'Wine cannot be regauged.'])->assertUnprocessable();
+        $this->post('/requests', ['holding_id' => Holding::where('reference', 'FW-C7011')->value('id'), 'type' => 'Evaluation', 'notes' => 'Not my holding.'])->assertNotFound();
     }
 
     public function test_admin_creates_accounts_and_assignment_controls_manager_access(): void
@@ -177,7 +178,7 @@ class PortalTest extends TestCase
     {
         $client = $this->actor('client');
         $this->actingAs($this->actor('manager'))->post('/clients/'.$client->id.'/profile', ['name' => 'Sophia Changed', 'notes' => 'Correct display name.'])->assertSessionHasNoErrors();
-        $change = PortalRecord::latest('id')->first();
+        $change = PortalEntry::latest('id')->first();
         $this->assertSame('Sophia Bennett', $client->fresh()->name);
         $this->actingAs($this->actor('admin'))->post('/approvals/'.$change->id, ['decision' => 'rejected'])->assertSessionHasErrors('reason');
         $this->post('/approvals/'.$change->id, ['decision' => 'approved'])->assertSessionHasNoErrors();
@@ -188,7 +189,7 @@ class PortalTest extends TestCase
     {
         $client = $this->actor('client');
         $this->actingAs($client)->post('/documents', ['client_id' => $client->id, 'title' => 'My onboarding file', 'category' => 'Ownership', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('onboarding.pdf', 20, 'application/pdf')])->assertSessionHasNoErrors();
-        $doc = PortalRecord::latest('id')->first();
+        $doc = PortalEntry::latest('id')->first();
         $this->assertSame('staff', $doc->data['visibility']);
         $this->assertSame('Onboarding', $doc->data['category']);
         $this->get('/documents')->assertSee('My onboarding file')->assertSee('Pending');
@@ -199,7 +200,7 @@ class PortalTest extends TestCase
     {
         $payload = ['client_id' => $this->actor('client')->id, 'type' => 'wine', 'name' => 'Test wine', 'reference' => 'W-TEST', 'producer' => 'Test producer', 'quantity' => 24, 'storage' => 'Test warehouse', 'acquired' => '2026-01-01', 'vintage' => 2018, 'bottle_ml' => 750, 'bottles_per_case' => 6, 'format' => '75 cl'];
         $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasNoErrors();
-        $holding = PortalRecord::latest('id')->first();
+        $holding = PortalEntry::latest('id')->first();
         $this->assertSame(24, $holding->data['quantity']);
         $this->actingAs($this->actor('client'))->get('/holding/'.$holding->id)->assertSee('Test wine')->assertDontSee('Purchase price')->assertDontSee('Indicative price');
         $this->post('/holdings', $payload)->assertForbidden();
@@ -211,7 +212,7 @@ class PortalTest extends TestCase
         $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasErrors('bottle_ml');
         $this->post('/holdings', $payload + ['bottle_ml' => -1])->assertSessionHasErrors('bottle_ml');
         $this->post('/holdings', $payload + ['bottle_ml' => 1500, 'litres' => 999, 'abv' => 50])->assertSessionHasNoErrors();
-        $wine = PortalRecord::latest('id')->first();
+        $wine = PortalEntry::latest('id')->first();
         $this->assertArrayNotHasKey('litres', $wine->data);
         $this->assertArrayNotHasKey('abv', $wine->data);
         foreach (['admin', 'manager', 'client'] as $role) {
@@ -229,7 +230,7 @@ class PortalTest extends TestCase
         $payload['litres'] = 200.25;
         $payload['abv'] = 62.5;
         $this->post('/holdings', $payload + ['bottle_ml' => 750, 'vintage' => 2020])->assertSessionHasNoErrors();
-        $cask = PortalRecord::latest('id')->first();
+        $cask = PortalEntry::latest('id')->first();
         $this->assertArrayNotHasKey('bottle_ml', $cask->data);
         $this->assertArrayNotHasKey('vintage', $cask->data);
         $this->actingAs($this->actor('client'))->get('/holding/'.$cask->id)->assertSee('1 cask')->assertSee('200.25 L recorded bulk')->assertSee('62.5% ABV');
@@ -239,9 +240,9 @@ class PortalTest extends TestCase
 
     public function test_unknown_measurements_are_not_reported_as_zero_or_complete_totals(): void
     {
-        $known = new PortalRecord(['data' => ['type' => 'wine', 'quantity' => 12, 'format' => '75 cl · 6-bottle cases']]);
-        $unknown = new PortalRecord(['data' => ['type' => 'wine', 'quantity' => 6, 'format' => 'Wooden case']]);
-        $zero = new PortalRecord(['data' => ['type' => 'whisky', 'quantity' => 1, 'litres' => 0]]);
+        $known = new PortalEntry(['data' => ['type' => 'wine', 'quantity' => 12, 'format' => '75 cl · 6-bottle cases']]);
+        $unknown = new PortalEntry(['data' => ['type' => 'wine', 'quantity' => 6, 'format' => 'Wooden case']]);
+        $zero = new PortalEntry(['data' => ['type' => 'whisky', 'quantity' => 1, 'litres' => 0]]);
         $this->assertSame('9 L wine', HoldingMeasurements::volume($known->data));
         $this->assertSame('Volume not recorded', HoldingMeasurements::volume($unknown->data));
         $this->assertSame('0 L recorded bulk', HoldingMeasurements::volume($zero->data));

@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PortalRecord;
+use App\Models\PortalEntry;
+use App\Services\DealAgreement;
 use App\Services\DocusignDemo;
 use App\Services\Portal;
 use Illuminate\Http\Client\ConnectionException;
@@ -19,14 +20,14 @@ class DealSigningController extends Controller
     {
         abort_unless($request->user()->role === 'client', 403);
         $deal = $this->portal->record($request->user(), $id, 'deal');
-        abort_unless(in_array($deal->data['template_version'] ?? '', ['demo-2026-11-03-v2', \App\Services\DealAgreement::TEMPLATE_VERSION]), 409, 'Create a new agreement using the signing-ready template.');
+        abort_unless(in_array($deal->data['template_version'] ?? '', ['demo-2026-11-03-v2', DealAgreement::TEMPLATE_VERSION]), 409, 'Create a new agreement using the signing-ready template.');
         $request->validate(['sandbox_ack' => 'accepted']);
         $document = $this->portal->record($request->user(), $deal->data['document_id'], 'document');
         abort_unless(($document->data['status'] ?? '') === 'approved', 409);
         try {
             // Cross-session lock prevents double-clicks creating duplicate envelopes.
             DB::transaction(function () use ($id, $document) {
-                $deal = PortalRecord::lockForUpdate()->findOrFail($id);
+                $deal = PortalEntry::lockForUpdate()->findOrFail($id);
                 if (empty($deal->data['envelope_id'])) {
                     $envelope = $this->signing->createDealEnvelope(Storage::disk('local')->get($document->data['path']),
                         $deal->data['client_name'], $deal->data['client_email'], 'deal-'.$id.'-client-'.$deal->client_id);
@@ -61,17 +62,17 @@ class DealSigningController extends Controller
             // Browser return events never establish completion.
             $status = $this->signing->status($envelope);
             DB::transaction(function () use ($id, $status, $envelope, &$path) {
-                $deal = PortalRecord::lockForUpdate()->findOrFail($id);
+                $deal = PortalEntry::lockForUpdate()->findOrFail($id);
                 $data = array_merge($deal->data, ['signing_status' => $status]);
                 if ($status === 'completed' && empty($data['signed_document_id'])) {
-                    $original = PortalRecord::findOrFail($data['document_id']);
+                    $original = PortalEntry::findOrFail($data['document_id']);
                     $path = 'agreements/'.Str::uuid().'.pdf';
                     $pdf = $this->signing->completedPdf($envelope);
                     if (! str_starts_with($pdf, '%PDF-')) {
                         throw new \RuntimeException('The signed file was not a PDF.');
                     }
                     abort_unless(Storage::disk('local')->put($path, $pdf), 500);
-                    $signed = PortalRecord::create(['client_id' => $deal->client_id, 'kind' => 'document', 'data' => [
+                    $signed = PortalEntry::create(['client_id' => $deal->client_id, 'kind' => 'document', 'data' => [
                         'title' => 'Signed deal FW-'.$id.' — '.$data['name'], 'category' => 'Agreement',
                         'status' => 'pending', 'visibility' => 'client', 'document_date' => now()->toDateString(),
                         'path' => $path, 'original_name' => 'fineworth-deal-'.$id.'-signed.pdf',

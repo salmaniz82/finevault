@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PortalRecord;
+use App\Models\PortalEntry;
 use App\Services\DirectSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class DirectSigningController extends Controller
 {
@@ -17,7 +18,7 @@ class DirectSigningController extends Controller
 
     private function records(Request $request)
     {
-        return PortalRecord::where('kind', 'direct_signature_demo')->where('client_id', $request->user()->id);
+        return PortalEntry::where('kind', 'direct_signature_demo')->where('client_id', $request->user()->id);
     }
 
     public function show(Request $request, DirectSignature $service)
@@ -29,10 +30,11 @@ class DirectSigningController extends Controller
         }
         $token = $request->session()->get($key);
         $variant = $request->session()->get('direct_signing_variant.'.$request->user()->id, 'standard');
+
         return view('direct-signing', [
             'title' => 'Direct signing demo', 'token' => $token,
             'variant' => $variant, 'hotspots' => $service->hotspots($variant),
-            'completed' => $this->records($request)->where('data->token', $token)->first(),
+            'completed' => $this->records($request)->whereField('token', $token)->first(),
             'history' => $this->records($request)->latest()->limit(10)->get(),
         ]);
     }
@@ -41,6 +43,7 @@ class DirectSigningController extends Controller
     {
         $this->admin($request);
         $variant = $request->session()->get('direct_signing_variant.'.$request->user()->id, 'standard');
+
         return response()->file($service->sample($variant), ['Content-Type' => 'application/pdf']);
     }
 
@@ -53,13 +56,13 @@ class DirectSigningController extends Controller
             'signature' => 'required|string|max:1000000', 'source_sha256' => 'required|string|size:64',
         ]);
         abort_unless($input['token'] === $request->session()->get('direct_signing.'.$request->user()->id), 419);
-        if ($this->records($request)->where('data->token', $input['token'])->exists()) {
+        if ($this->records($request)->whereField('token', $input['token'])->exists()) {
             return redirect('/direct-signing-demo');
         }
         $variant = $request->session()->get('direct_signing_variant.'.$request->user()->id, 'standard');
         $hotspots = $service->hotspots($variant);
         if (! hash_equals($hotspots['source_sha256'], $input['source_sha256'])) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['source_sha256' => 'The agreement changed. Reload and review the current document before signing.']);
+            throw ValidationException::withMessages(['source_sha256' => 'The agreement changed. Reload and review the current document before signing.']);
         }
         $png = $service->image($input['signature']);
         $disk = Storage::disk('local');
@@ -84,6 +87,7 @@ class DirectSigningController extends Controller
         } finally {
             $disk->delete($temporary);
         }
+
         return redirect('/direct-signing-demo')->with('success', 'Completed — your signed sample PDF has been saved privately.');
     }
 
@@ -91,6 +95,7 @@ class DirectSigningController extends Controller
     {
         $this->admin($request);
         $record = $this->records($request)->findOrFail($id);
+
         return Storage::disk('local')->download($record->data['path'], 'fineworth-direct-signed-'.$record->id.'.pdf', ['Content-Type' => 'application/pdf']);
     }
 
@@ -100,6 +105,7 @@ class DirectSigningController extends Controller
         $request->validate(['variant' => 'sometimes|in:standard,extended']);
         $request->session()->put('direct_signing_variant.'.$request->user()->id, $request->input('variant', 'standard'));
         $request->session()->put('direct_signing.'.$request->user()->id, (string) Str::uuid());
+
         return redirect('/direct-signing-demo');
     }
 }

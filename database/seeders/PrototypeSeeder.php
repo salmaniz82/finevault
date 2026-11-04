@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\PortalRecord;
+use App\Models\PortalEntry;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
@@ -17,8 +17,9 @@ class PrototypeSeeder extends Seeder
         $otherManager = User::firstOrCreate(['email' => 'amelia@fineworth.test'], ['name' => 'Amelia Clarke', 'password' => 'FineworthDemo!27', 'role' => 'manager', 'manager_ids' => []]);
         $sophia = User::firstOrCreate(['email' => 'client@fineworth.test'], ['name' => 'Sophia Bennett', 'password' => 'FineworthDemo!27', 'role' => 'client', 'manager_ids' => [$manager->id]]);
         $james = User::firstOrCreate(['email' => 'james@fineworth.test'], ['name' => 'James Whitmore', 'password' => 'FineworthDemo!27', 'role' => 'client', 'manager_ids' => [$otherManager->id]]);
-        if (PortalRecord::where('kind', 'holding')->exists()) {
+        if (PortalEntry::where('kind', 'holding')->exists()) {
             $this->onboardingGuide($sophia, $admin);
+
             return;
         }
         $samples = [
@@ -32,7 +33,7 @@ class PrototypeSeeder extends Seeder
         ];
         $holdings = [];
         foreach ($samples as [$owner,$data]) {
-            $holdings[] = PortalRecord::create(['client_id' => $owner, 'kind' => 'holding', 'data' => $data + ['status' => 'In storage']]);
+            $holdings[] = PortalEntry::create(['client_id' => $owner, 'kind' => 'holding', 'data' => $data + ['status' => 'In storage']]);
         }
         $docs = [
             ['Ownership certificate', 'Ownership', '2021-06-14', 'approved', 'client', 'ownership-1', null],
@@ -44,19 +45,19 @@ class PrototypeSeeder extends Seeder
         foreach ($docs as $index => [$title,$category,$date,$status,$visibility,$series,$replaces]) {
             $path = 'documents/sample-'.($index + 1).'.pdf';
             Storage::disk('local')->put($path, $this->samplePdf($title));
-            PortalRecord::create(['client_id' => $sophia->id, 'kind' => 'document', 'data' => ['title' => $title, 'category' => $category, 'document_date' => $date, 'status' => $status, 'visibility' => $visibility, 'series' => $series, 'holding_id' => $category === 'KYC' ? null : $holdings[0]->id, 'path' => $path, 'original_name' => 'sample-'.($index + 1).'.pdf', 'uploaded_by' => $manager->name, 'uploaded_by_id' => $manager->id, 'reviewed_by' => $status === 'approved' ? $admin->name : null, 'reviewed_at' => $status === 'approved' ? $date.'T12:00:00+05:00' : null, 'replaces_id' => $replaces ? PortalRecord::where('kind', 'document')->where('data->title', 'Storage confirmation — 2025')->value('id') : null, 'notes' => 'Fictional sample document for demonstrating private review and record history.']]);
+            PortalEntry::create(['client_id' => $sophia->id, 'kind' => 'document', 'data' => ['title' => $title, 'category' => $category, 'document_date' => $date, 'status' => $status, 'visibility' => $visibility, 'series' => $series, 'holding_id' => $category === 'KYC' ? null : $holdings[0]->id, 'path' => $path, 'original_name' => 'sample-'.($index + 1).'.pdf', 'uploaded_by' => $manager->name, 'uploaded_by_id' => $manager->id, 'reviewed_by' => $status === 'approved' ? $admin->name : null, 'reviewed_at' => $status === 'approved' ? $date.'T12:00:00+05:00' : null, 'replaces_id' => $replaces ? PortalEntry::where('kind', 'document')->whereField('title', 'Storage confirmation — 2025')->value('id') : null, 'notes' => 'Fictional sample document for demonstrating private review and record history.']]);
         }
-        PortalRecord::create(['client_id' => $sophia->id, 'kind' => 'request', 'data' => ['holding_id' => $holdings[1]->id, 'holding_name' => 'Bunnahabhain 2016', 'type' => 'Photographs', 'notes' => 'Please arrange recent photographs of the cask and its warehouse markings.', 'status' => 'in progress', 'staff_note' => 'We have contacted the warehouse and are awaiting their response.', 'history' => [['status' => 'in progress', 'staff_note' => 'Warehouse contacted.', 'by' => $manager->name, 'at' => '2026-10-26T10:00:00+05:00']]]]);
-        PortalRecord::create(['client_id' => $sophia->id, 'kind' => 'profile', 'data' => ['name' => 'Sophia R. Bennett', 'notes' => 'Demonstration: client requested a correction to the display name.', 'status' => 'pending', 'uploaded_by' => $manager->name]]);
+        PortalEntry::create(['client_id' => $sophia->id, 'kind' => 'request', 'data' => ['holding_id' => $holdings[1]->id, 'holding_name' => 'Bunnahabhain 2016', 'type' => 'Photographs', 'notes' => 'Please arrange recent photographs of the cask and its warehouse markings.', 'status' => 'in progress', 'staff_note' => 'We have contacted the warehouse and are awaiting their response.', 'history' => [['status' => 'in progress', 'staff_note' => 'Warehouse contacted.', 'by' => $manager->name, 'at' => '2026-10-26T10:00:00+05:00']]]]);
+        PortalEntry::create(['client_id' => $sophia->id, 'kind' => 'profile', 'data' => ['name' => 'Sophia R. Bennett', 'notes' => 'Demonstration: client requested a correction to the display name.', 'status' => 'pending', 'uploaded_by' => $manager->name]]);
         $this->onboardingGuide($sophia, $admin);
     }
 
     private function onboardingGuide(User $sophia, User $admin): void
     {
         // Append the onboarding example even to an already populated prototype.
-        if (! PortalRecord::where('client_id', $sophia->id)->where('kind', 'document')->where('data->series', 'demo-onboarding-guide')->exists()) {
+        if (! PortalEntry::where('client_id', $sophia->id)->where('kind', 'document')->whereField('series', 'demo-onboarding-guide')->exists()) {
             Storage::disk('local')->put('documents/demo-onboarding-guide.pdf', file_get_contents(resource_path('demo/fineworth-onboarding-guide.pdf')));
-            PortalRecord::create(['client_id' => $sophia->id, 'kind' => 'document', 'data' => [
+            PortalEntry::create(['client_id' => $sophia->id, 'kind' => 'document', 'data' => [
                 'title' => 'Welcome to your vault - onboarding guide', 'category' => 'Onboarding',
                 'document_date' => '2026-10-29', 'status' => 'approved', 'visibility' => 'client',
                 'series' => 'demo-onboarding-guide', 'holding_id' => null,

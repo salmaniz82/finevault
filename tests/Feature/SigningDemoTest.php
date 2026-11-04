@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\PortalRecord;
+use App\Models\PortalEntry;
 use App\Models\User;
 use App\Services\DocusignDemo;
 use Database\Seeders\PrototypeSeeder;
@@ -150,14 +150,14 @@ class SigningDemoTest extends TestCase
             '*/views/recipient' => Http::response(['url' => 'https://demo.docusign.net/signing/test']),
         ]);
         $users = User::count();
-        $records = PortalRecord::count();
+        $records = PortalEntry::count();
         $this->actingAs($this->actor('admin'));
         $this->get('/signing-demo')->assertOk()->assertSee('Alexander Morgan')->assertSee('View sample PDF')->assertDontSee('<object', false)->assertDontSee('Document preview');
         $this->get('/signing-demo/sample')->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertHeader('X-Frame-Options', 'DENY');
         $this->post('/signing-demo/sign')->assertRedirect('https://demo.docusign.net/signing/test');
         $this->post('/signing-demo/sign')->assertRedirect('https://demo.docusign.net/signing/test');
         $this->assertSame($users, User::count());
-        $this->assertSame($records, PortalRecord::count());
+        $this->assertSame($records, PortalEntry::count());
         $this->assertCount(1, Http::recorded(fn ($r) => str_ends_with($r->url(), '/envelopes')));
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/envelopes') && $r['recipients']['signers'][0]['clientUserId'] === DocusignDemo::CLIENT_ID && str_starts_with(base64_decode($r['documents'][0]['documentBase64']), '%PDF-'));
     }
@@ -190,15 +190,15 @@ class SigningDemoTest extends TestCase
     public function test_onboarding_reviews_are_private_version_specific_and_repeatable(): void
     {
         $client = $this->actor('client');
-        $doc = PortalRecord::create(['client_id' => $client->id, 'kind' => 'document', 'data' => ['title' => 'Welcome and next steps', 'category' => 'Onboarding', 'status' => 'approved', 'visibility' => 'client', 'document_date' => '2026-10-29']]);
+        $doc = PortalEntry::create(['client_id' => $client->id, 'kind' => 'document', 'data' => ['title' => 'Welcome and next steps', 'category' => 'Onboarding', 'status' => 'approved', 'visibility' => 'client', 'document_date' => '2026-10-29']]);
         $this->actingAs($client)->get('/dashboard')->assertOk()->assertSee('Welcome and next steps')->assertSee('Record review');
         $this->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertSessionHasNoErrors();
         $this->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertSessionHasNoErrors();
-        $this->assertSame(1, PortalRecord::where('kind', 'onboarding_ack')->count());
+        $this->assertSame(1, PortalEntry::where('kind', 'onboarding_ack')->count());
         $this->get('/dashboard')->assertSee('Review recorded');
         $this->actingAs($this->actor('james'))->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertNotFound();
         $this->actingAs($this->actor('manager'))->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertForbidden();
-        $doc->update(['data' => array_merge($doc->data, ['visibility' => 'staff'])]);
+        $doc = PortalEntry::create(['client_id' => $client->id, 'kind' => 'document', 'data' => ['title' => 'Private onboarding submission', 'category' => 'Onboarding', 'status' => 'approved', 'visibility' => 'staff', 'document_date' => '2026-10-29']]);
         $this->actingAs($client)->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertNotFound();
     }
 }

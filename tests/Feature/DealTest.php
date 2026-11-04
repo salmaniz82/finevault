@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\PortalRecord;
+use App\Models\PortalEntry;
 use App\Models\User;
 use App\Services\DealAgreement;
 use App\Services\DocusignDemo;
@@ -41,11 +41,11 @@ class DealTest extends TestCase
     public function test_deal_generation_approval_client_review_and_private_access(): void
     {
         $this->actingAs($this->user('admin'))->post('/deals', $this->payload())->assertSessionHasNoErrors();
-        $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
         $this->assertSame(['stock' => 600000, 'markup' => 30000, 'management' => 15000, 'brokerage' => 12000, 'total' => 657000, 'deposit' => 150000, 'balance' => 507000], $deal->data['totals']);
         $this->get('/deals/'.$deal->id)->assertOk()->assertSee('GBP 5,070.00');
         $this->post('/deals/'.$deal->id.'/generate')->assertSessionHasNoErrors();
-        $doc = PortalRecord::findOrFail($deal->fresh()->data['document_id']);
+        $doc = PortalEntry::findOrFail($deal->fresh()->data['document_id']);
         $this->assertStringStartsWith('%PDF-', Storage::disk('local')->get($doc->data['path']));
         $this->assertSame(hash('sha256', Storage::disk('local')->get($doc->data['path'])), $doc->data['signing_hotspots']['source_sha256']);
         $this->assertArrayHasKey('full_name', $doc->data['signing_hotspots']['fields']);
@@ -73,7 +73,7 @@ class DealTest extends TestCase
         $this->post('/deals', array_replace($this->payload(), ['deposit' => '99999']))->assertSessionHasErrors('deposit');
         $this->post('/deals', array_replace($this->payload(), ['unit_price' => '1.123']))->assertSessionHasErrors('unit_price');
         $this->post('/deals', array_replace($this->payload(), ['type' => 'whisky', 'quantity' => 2]))->assertSessionHasErrors(['quantity', 'ola', 'rla', 'cask_size']);
-        $this->assertSame(0, PortalRecord::where('kind', 'deal')->count());
+        $this->assertSame(0, PortalEntry::where('kind', 'deal')->count());
     }
 
     public function test_rejected_agreement_remains_private_and_one_manager_can_manage_multiple_clients(): void
@@ -83,7 +83,7 @@ class DealTest extends TestCase
         $this->actingAs($manager)->get('/clients')->assertSee('Sophia Bennett')->assertSee('James Whitmore');
         $this->actingAs($this->user('admin'));
         $this->post('/deals', $this->payload())->assertSessionHasNoErrors();
-        $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
         $this->post('/deals/'.$deal->id.'/generate');
         $doc = $deal->fresh()->data['document_id'];
         $this->actingAs($this->user('admin'))->post('/approvals/'.$doc, ['decision' => 'rejected', 'reason' => 'Correct the deposit reference.'])->assertRedirect();
@@ -99,7 +99,7 @@ class DealTest extends TestCase
         $this->assertSame(1, $amounts['markup']);
         $this->assertSame(10, $amounts['balance']);
         $this->actingAs($this->user('admin'))->get('/dashboard')->assertSee('3 items need attention')->assertDontSee('Collection mix');
-        $pending = PortalRecord::where('kind', 'profile')->firstOrFail();
+        $pending = PortalEntry::where('kind', 'profile')->firstOrFail();
         $this->post('/approvals/'.$pending->id, ['decision' => 'approved']);
         $this->get('/dashboard')->assertSee('2 items need attention');
     }
@@ -107,7 +107,7 @@ class DealTest extends TestCase
     public function test_manager_cannot_view_or_change_deals_or_agreements(): void
     {
         $this->actingAs($this->user('admin'))->post('/deals', $this->payload());
-        $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
         $this->post('/deals/'.$deal->id.'/generate');
         $doc = $deal->fresh()->data['document_id'];
         $this->post('/approvals/'.$doc, ['decision' => 'approved']);
@@ -128,7 +128,7 @@ class DealTest extends TestCase
     public function test_generated_deal_signing_requires_owner_and_verified_completion_before_publication(): void
     {
         $this->actingAs($this->user('admin'))->post('/deals', $this->payload());
-        $deal = PortalRecord::where('kind', 'deal')->firstOrFail();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
         $this->post('/deals/'.$deal->id.'/generate');
         $original = $deal->fresh()->data['document_id'];
         $this->actingAs($this->user('admin'))->post('/approvals/'.$original, ['decision' => 'approved']);
@@ -145,12 +145,12 @@ class DealTest extends TestCase
         $this->assertArrayNotHasKey('signed_document_id', $deal->fresh()->data);
         $signing->shouldReceive('completedPdf')->once()->with($envelope)->andReturn('%PDF-1.4 fictional signed test');
         $this->post('/deals/'.$deal->id.'/signing-refresh')->assertRedirect();
-        $signed = PortalRecord::findOrFail($deal->fresh()->data['signed_document_id']);
+        $signed = PortalEntry::findOrFail($deal->fresh()->data['signed_document_id']);
         $this->assertSame('pending', $signed->data['status']);
         $this->assertSame($original, $signed->data['replaces_id']);
         $this->get('/documents/'.$signed->id.'/download')->assertNotFound();
         $this->post('/deals/'.$deal->id.'/signing-refresh')->assertRedirect();
-        $this->assertSame(1, PortalRecord::where('kind', 'document')->where('data->replaces_id', $original)->count());
+        $this->assertSame(1, PortalEntry::where('kind', 'document')->whereField('replaces_id', $original)->count());
         $this->actingAs($this->user('admin'))->post('/approvals/'.$signed->id, ['decision' => 'approved'])->assertRedirect();
         $this->actingAs($this->user('client'))->get('/documents/'.$signed->id.'/download')->assertOk();
         $this->get('/documents/'.$original.'/download')->assertOk();
