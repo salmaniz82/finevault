@@ -44,6 +44,26 @@ class DealTest extends TestCase
             'management_rate' => '2.5', 'brokerage_rate' => '2'];
     }
 
+    public function test_agreement_creation_has_a_separate_admin_only_page(): void
+    {
+        $this->get('/deals/create')->assertRedirect('/login');
+        $this->actingAs($this->user('admin'))->get('/deals')->assertOk()
+            ->assertSee('href="'.route('deals.create').'"', false)
+            ->assertDontSee('data-agreement-form', false);
+        $this->get('/deals/create')->assertOk()->assertViewIs('deal-create')
+            ->assertSee('data-agreement-form', false)->assertSee('Add another stock item');
+        $this->from('/deals/create')->post('/deals', ['client_address' => 'Retained address'])
+            ->assertRedirect('/deals/create')->assertSessionHasErrors('client_id');
+        $this->get('/deals/create')->assertOk()->assertSee('Retained address');
+        $this->post('/deals', $this->payload())->assertSessionHasNoErrors();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
+        $this->assertSame('draft', $deal->status);
+        $this->get('/deals/'.$deal->id)->assertOk();
+        $this->actingAs($this->user('manager'))->get('/deals/create')->assertForbidden();
+        $this->actingAs($this->user('client'))->get('/deals/create')->assertForbidden();
+        $this->get('/deals')->assertOk()->assertDontSee('Create agreement')->assertDontSee('data-agreement-form', false);
+    }
+
     public function test_deal_generation_approval_client_review_and_private_access(): void
     {
         $this->actingAs($this->user('admin'))->post('/deals', $this->payload())->assertSessionHasNoErrors();

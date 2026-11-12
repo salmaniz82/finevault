@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/direct-signing-demo/reset', [DirectSigningController::class, 'reset'])->block();
     Route::get('/direct-signing-demo/{id}/download', [DirectSigningController::class, 'download'])->whereNumber('id');
     Route::get('/deals', [DealController::class, 'index']);
+    Route::get('/deals/create', [DealController::class, 'create'])->name('deals.create');
     Route::post('/deals/{id}/sign', [DealSigningController::class, 'sign'])->whereNumber('id')->middleware('throttle:10,1')->block();
     Route::get('/deals/{id}/signing-return', [DealSigningController::class, 'refresh'])->whereNumber('id')->block();
     Route::post('/deals/{id}/signing-refresh', [DealSigningController::class, 'refresh'])->whereNumber('id')->middleware('throttle:10,1')->block();

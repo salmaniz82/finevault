@@ -24,8 +24,14 @@ class DealController extends Controller
         abort_if($request->user()->role === 'manager', 403);
 
         return view('deals', ['title' => 'Deals & agreements', 'user' => $request->user(),
-            'clients' => $this->portal->clients($request->user())->get(),
             'deals' => $this->portal->records($request->user(), 'deal')->latest()->get()]);
+    }
+
+    public function create(Request $request)
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+
+        return view('deal-create', ['title' => 'Create agreement', 'user' => $request->user()]);
     }
 
     public function store(Request $request)
