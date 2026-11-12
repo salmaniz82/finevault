@@ -14,6 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(PrototypeSeeder::class);
+        $this->call(config('staging-demo.enabled') ? StagingDemoSeeder::class : PrototypeSeeder::class);
     }
 }

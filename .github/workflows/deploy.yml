@@ -32,6 +32,16 @@ jobs:
             git pull origin main
 
             composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-            php artisan migrate --force
+            # This workflow targets the demo staging server only.
+            export APP_ENV=staging PORTAL_DEMO_SEED=true
             php artisan optimize:clear
+            php artisan down
+            # Also supports an empty staging database without resetting existing data.
+            php artisan migrate --force --path=database/migrations/0001_01_01_000000_create_users_table.php --path=database/migrations/2026_10_27_000001_create_prototype_records.php
+            # The legacy backfill needs its missing users BEFORE it can migrate.
+            php artisan db:seed --class=StagingUsersSeeder --force
+            php artisan migrate --force
+            php artisan db:seed --force
+            php artisan portal:verify
             php artisan optimize
+            php artisan up

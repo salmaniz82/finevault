@@ -1,0 +1,1635 @@
+{
+    "version": 1,
+    "tables": {
+        "roles": [
+            {
+                "code": "admin",
+                "name": "Administrator"
+            },
+            {
+                "code": "client",
+                "name": "Client"
+            },
+            {
+                "code": "manager",
+                "name": "Manager"
+            }
+        ],
+        "document_types": [
+            {
+                "code": "Agreement",
+                "staff_only": 0
+            },
+            {
+                "code": "Evaluation",
+                "staff_only": 0
+            },
+            {
+                "code": "KYC",
+                "staff_only": 1
+            },
+            {
+                "code": "Onboarding",
+                "staff_only": 0
+            },
+            {
+                "code": "Ownership",
+                "staff_only": 0
+            },
+            {
+                "code": "Regauge",
+                "staff_only": 0
+            },
+            {
+                "code": "Storage",
+                "staff_only": 0
+            }
+        ],
+        "users": [
+            {
+                "id": 1,
+                "name": "Alex Morgan",
+                "email": "admin@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-10-27 23:20:28",
+                "updated_at": "2026-10-27 23:20:28",
+                "role": "admin"
+            },
+            {
+                "id": 2,
+                "name": "Oliver Grant",
+                "email": "manager@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-10-27 23:20:28",
+                "updated_at": "2026-10-27 23:20:28",
+                "role": "manager"
+            },
+            {
+                "id": 3,
+                "name": "Amelia Clarke",
+                "email": "amelia@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29",
+                "role": "manager"
+            },
+            {
+                "id": 4,
+                "name": "Sophia Bennett",
+                "email": "client@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29",
+                "role": "client"
+            },
+            {
+                "id": 5,
+                "name": "James Whitmore",
+                "email": "james@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29",
+                "role": "client"
+            },
+            {
+                "id": 6,
+                "name": "Evelyn Hart — demonstration",
+                "email": "evelyn.demo@fineworth.test",
+                "email_verified_at": null,
+                "created_at": "2026-11-03 22:03:38",
+                "updated_at": "2026-11-03 22:03:38",
+                "role": "client"
+            }
+        ],
+        "client_profiles": [
+            {
+                "user_id": 4,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29",
+                "phone": null,
+                "address": null,
+                "onboarding_status": "draft",
+                "submitted_at": null,
+                "approved_at": null,
+                "reviewed_by_id": null,
+                "review_note": null
+            },
+            {
+                "user_id": 5,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29",
+                "phone": null,
+                "address": null,
+                "onboarding_status": "draft",
+                "submitted_at": null,
+                "approved_at": null,
+                "reviewed_by_id": null,
+                "review_note": null
+            },
+            {
+                "user_id": 6,
+                "created_at": "2026-11-03 22:03:38",
+                "updated_at": "2026-11-03 22:03:38",
+                "phone": null,
+                "address": null,
+                "onboarding_status": "draft",
+                "submitted_at": null,
+                "approved_at": null,
+                "reviewed_by_id": null,
+                "review_note": null
+            }
+        ],
+        "client_manager_assignments": [
+            {
+                "client_id": 4,
+                "manager_id": 2,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "client_id": 5,
+                "manager_id": 3,
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "client_id": 6,
+                "manager_id": 2,
+                "created_at": "2026-11-03 22:03:38",
+                "updated_at": "2026-11-03 22:03:38"
+            }
+        ],
+        "portal_entries": [
+            {
+                "id": 1,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 2,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 3,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 4,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 5,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 6,
+                "client_id": 4,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 7,
+                "client_id": 5,
+                "kind": "holding",
+                "status": "In storage",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 8,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 9,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 10,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 11,
+                "client_id": 4,
+                "kind": "document",
+                "status": "pending",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 12,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 13,
+                "client_id": 4,
+                "kind": "request",
+                "status": "in progress",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 14,
+                "client_id": 4,
+                "kind": "profile",
+                "status": "pending",
+                "created_at": "2026-10-27 23:20:29",
+                "updated_at": "2026-10-27 23:20:29"
+            },
+            {
+                "id": 15,
+                "client_id": 4,
+                "kind": "request",
+                "status": "submitted",
+                "created_at": "2026-10-27 23:23:35",
+                "updated_at": "2026-10-27 23:23:35"
+            },
+            {
+                "id": 16,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-27 23:27:10",
+                "updated_at": "2026-10-27 23:27:46"
+            },
+            {
+                "id": 17,
+                "client_id": 4,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-10-29 22:01:39",
+                "updated_at": "2026-10-29 22:01:39"
+            },
+            {
+                "id": 18,
+                "client_id": 6,
+                "kind": "deal",
+                "status": "reviewed",
+                "created_at": "2026-11-03 22:03:41",
+                "updated_at": "2026-11-03 22:03:46"
+            },
+            {
+                "id": 19,
+                "client_id": 6,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-11-03 22:03:42",
+                "updated_at": "2026-11-03 22:03:44"
+            },
+            {
+                "id": 20,
+                "client_id": 4,
+                "kind": "deal",
+                "status": "rejected",
+                "created_at": "2026-11-03 22:03:49",
+                "updated_at": "2026-11-03 22:13:55"
+            },
+            {
+                "id": 21,
+                "client_id": 4,
+                "kind": "document",
+                "status": "rejected",
+                "created_at": "2026-11-03 22:03:50",
+                "updated_at": "2026-11-03 22:13:55"
+            },
+            {
+                "id": 22,
+                "client_id": 6,
+                "kind": "deal",
+                "status": "reviewed",
+                "created_at": "2026-11-03 22:07:23",
+                "updated_at": "2026-11-03 22:07:28"
+            },
+            {
+                "id": 23,
+                "client_id": 6,
+                "kind": "document",
+                "status": "approved",
+                "created_at": "2026-11-03 22:07:24",
+                "updated_at": "2026-11-03 22:07:25"
+            },
+            {
+                "id": 24,
+                "client_id": 4,
+                "kind": "deal",
+                "status": "pending",
+                "created_at": "2026-11-03 22:07:30",
+                "updated_at": "2026-11-03 22:07:31"
+            },
+            {
+                "id": 25,
+                "client_id": 4,
+                "kind": "document",
+                "status": "pending",
+                "created_at": "2026-11-03 22:07:31",
+                "updated_at": "2026-11-03 22:07:31"
+            },
+            {
+                "id": 26,
+                "client_id": 1,
+                "kind": "direct_signature_demo",
+                "status": "completed",
+                "created_at": "2026-11-04 22:04:42",
+                "updated_at": "2026-11-04 22:04:42"
+            },
+            {
+                "id": 27,
+                "client_id": 1,
+                "kind": "direct_signature_demo",
+                "status": "completed",
+                "created_at": "2026-11-04 22:09:12",
+                "updated_at": "2026-11-04 22:09:12"
+            },
+            {
+                "id": 28,
+                "client_id": 1,
+                "kind": "direct_signature_demo",
+                "status": "completed",
+                "created_at": "2026-11-04 22:20:50",
+                "updated_at": "2026-11-04 22:20:50"
+            },
+            {
+                "id": 29,
+                "client_id": 1,
+                "kind": "direct_signature_demo",
+                "status": "completed",
+                "created_at": "2026-11-04 22:31:40",
+                "updated_at": "2026-11-04 22:31:40"
+            }
+        ],
+        "holdings": [
+            {
+                "id": 1,
+                "client_id": 4,
+                "type": "whisky",
+                "name": "Macallan 2019",
+                "reference": "FW-C4188",
+                "producer": "The Macallan",
+                "quantity": 1,
+                "storage": "Speyside Bonded Warehouse",
+                "acquired": "2021-06-14",
+                "notes": "Fictional demonstration holding. Original ownership and storage evidence kept alongside the cask.",
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 2,
+                "client_id": 4,
+                "type": "whisky",
+                "name": "Bunnahabhain 2016",
+                "reference": "FW-C5321",
+                "producer": "Bunnahabhain",
+                "quantity": 1,
+                "storage": "Islay Bonded Storage",
+                "acquired": "2022-09-21",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 3,
+                "client_id": 4,
+                "type": "wine",
+                "name": "Château Lafite Rothschild",
+                "reference": "FW-W1024",
+                "producer": "Domaines Barons de Rothschild",
+                "quantity": 24,
+                "storage": "London City Bond",
+                "acquired": "2023-02-16",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 4,
+                "client_id": 4,
+                "type": "wine",
+                "name": "Dom Pérignon Vintage",
+                "reference": "FW-W1025",
+                "producer": "Moët & Chandon",
+                "quantity": 12,
+                "storage": "London City Bond",
+                "acquired": "2023-10-05",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 5,
+                "client_id": 4,
+                "type": "wine",
+                "name": "Château Margaux",
+                "reference": "FW-W1026",
+                "producer": "Château Margaux",
+                "quantity": 18,
+                "storage": "Octavian Vaults",
+                "acquired": "2024-04-12",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 6,
+                "client_id": 4,
+                "type": "wine",
+                "name": "Opus One",
+                "reference": "FW-W1027",
+                "producer": "Opus One Winery",
+                "quantity": 12,
+                "storage": "Octavian Vaults",
+                "acquired": "2024-08-19",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            },
+            {
+                "id": 7,
+                "client_id": 5,
+                "type": "whisky",
+                "name": "Highland Park 2018",
+                "reference": "FW-C7011",
+                "producer": "Highland Park",
+                "quantity": 1,
+                "storage": "Orkney Bonded Warehouse",
+                "acquired": "2022-05-09",
+                "notes": null,
+                "agreement_id": null,
+                "released_at": null
+            }
+        ],
+        "whisky_holdings": [
+            {
+                "holding_id": 1,
+                "fill_date": "2019-03-18",
+                "cask_type": "Ex-bourbon barrel",
+                "abv": "63.4000",
+                "litres": "197.3000"
+            },
+            {
+                "holding_id": 2,
+                "fill_date": "2016-05-10",
+                "cask_type": "Sherry hogshead",
+                "abv": "59.8000",
+                "litres": "243.5000"
+            },
+            {
+                "holding_id": 7,
+                "fill_date": "2018-02-12",
+                "cask_type": "Refill sherry butt",
+                "abv": "61.2000",
+                "litres": "420.5000"
+            }
+        ],
+        "wine_holdings": [
+            {
+                "holding_id": 3,
+                "vintage": 2018,
+                "format": "75 cl · 6-bottle cases",
+                "bottle_ml": null,
+                "bottles_per_case": null
+            },
+            {
+                "holding_id": 4,
+                "vintage": 2012,
+                "format": "75 cl · 6-bottle cases",
+                "bottle_ml": null,
+                "bottles_per_case": null
+            },
+            {
+                "holding_id": 5,
+                "vintage": 2015,
+                "format": "75 cl · 6-bottle cases",
+                "bottle_ml": null,
+                "bottles_per_case": null
+            },
+            {
+                "holding_id": 6,
+                "vintage": 2019,
+                "format": "75 cl · 6-bottle cases",
+                "bottle_ml": null,
+                "bottles_per_case": null
+            }
+        ],
+        "documents": [
+            {
+                "id": 1,
+                "client_id": 4,
+                "series": "ownership-1",
+                "category": "Ownership",
+                "visibility": "client"
+            },
+            {
+                "id": 2,
+                "client_id": 4,
+                "series": "storage-1",
+                "category": "Storage",
+                "visibility": "client"
+            },
+            {
+                "id": 3,
+                "client_id": 4,
+                "series": "regauge-1",
+                "category": "Regauge",
+                "visibility": "client"
+            },
+            {
+                "id": 4,
+                "client_id": 4,
+                "series": "kyc-1",
+                "category": "KYC",
+                "visibility": "staff"
+            },
+            {
+                "id": 5,
+                "client_id": 4,
+                "series": "745cae56-db50-4d1e-9550-27ab0eeb53ba",
+                "category": "Regauge",
+                "visibility": "client"
+            },
+            {
+                "id": 6,
+                "client_id": 4,
+                "series": "demo-onboarding-guide",
+                "category": "Onboarding",
+                "visibility": "client"
+            },
+            {
+                "id": 7,
+                "client_id": 6,
+                "series": "b98447a2-1892-4639-bd81-de1fe99ba60d",
+                "category": "Agreement",
+                "visibility": "client"
+            },
+            {
+                "id": 8,
+                "client_id": 4,
+                "series": "01c5985c-e1dc-48b3-ad0f-a95a8bbf5203",
+                "category": "Agreement",
+                "visibility": "client"
+            },
+            {
+                "id": 9,
+                "client_id": 6,
+                "series": "46708abf-acd4-4852-a879-e0a12b20e4fd",
+                "category": "Agreement",
+                "visibility": "client"
+            },
+            {
+                "id": 10,
+                "client_id": 4,
+                "series": "e062c4db-dbc2-4726-9036-545d31460bad",
+                "category": "Agreement",
+                "visibility": "client"
+            }
+        ],
+        "deals": [
+            {
+                "id": 18,
+                "client_id": 6,
+                "client_name": "Evelyn Hart — demonstration",
+                "client_email": "evelyn.demo@fineworth.test",
+                "client_address": "14 Example Square, London, W1A 1AA",
+                "created_by": "Oliver Grant",
+                "created_by_id": null,
+                "template_version": "demo-2026-11-03",
+                "currency": "GBP",
+                "balance_due": "2026-12-03",
+                "stock_minor": 600000,
+                "total_minor": 657000,
+                "balance_minor": 507000,
+                "review_note": null,
+                "acknowledged_at": "2026-11-03 17:03:46",
+                "agreement_snapshot": "{\"name\": \"Château Margaux 2018 · November demo\", \"type\": \"wine\", \"totals\": {\"stock\": 600000, \"total\": 657000, \"markup\": 30000, \"balance\": 507000, \"deposit\": 150000, \"brokerage\": 12000, \"management\": 15000}, \"deposit\": \"1500\", \"storage\": \"London City Bond\", \"vintage\": \"2018\", \"producer\": \"Château Margaux\", \"quantity\": \"24\", \"bottle_ml\": \"750\", \"client_id\": \"6\", \"reference\": \"DEMO-WINE-20261103\", \"created_at\": \"2026-11-03T22:03:41+05:00\", \"created_by\": \"Oliver Grant\", \"unit_price\": \"250\", \"balance_due\": \"2026-12-03\", \"client_name\": \"Evelyn Hart — demonstration\", \"markup_rate\": \"5\", \"client_email\": \"evelyn.demo@fineworth.test\", \"deposit_date\": \"2026-11-03\", \"brokerage_rate\": \"2\", \"client_address\": \"14 Example Square, London, W1A 1AA\", \"management_rate\": \"2.5\", \"template_version\": \"demo-2026-11-03\", \"deposit_reference\": \"DEMO-EXTERNAL-20261103\"}",
+                "document_id": 19,
+                "signed_document_id": null
+            },
+            {
+                "id": 20,
+                "client_id": 4,
+                "client_name": "Sophia Bennett",
+                "client_email": "client@fineworth.test",
+                "client_address": "14 Example Square, London, W1A 1AA",
+                "created_by": "Oliver Grant",
+                "created_by_id": null,
+                "template_version": "demo-2026-11-03",
+                "currency": "GBP",
+                "balance_due": "2026-12-03",
+                "stock_minor": 1200000,
+                "total_minor": 1314000,
+                "balance_minor": 1014000,
+                "review_note": "Superseded by the signing-ready demonstration. Original snapshot retained.",
+                "acknowledged_at": null,
+                "agreement_snapshot": "{\"abv\": \"59.8\", \"ola\": \"160\", \"rla\": \"145.61\", \"name\": \"Bunnahabhain 2016 · November demo\", \"type\": \"whisky\", \"totals\": {\"stock\": 1200000, \"total\": 1314000, \"markup\": 60000, \"balance\": 1014000, \"deposit\": 300000, \"brokerage\": 24000, \"management\": 30000}, \"deposit\": \"3000\", \"storage\": \"Islay Bonded Storage\", \"producer\": \"Bunnahabhain\", \"quantity\": \"1\", \"cask_size\": \"250\", \"cask_type\": \"Sherry hogshead\", \"client_id\": \"4\", \"reference\": \"DEMO-CASK-20261103\", \"created_at\": \"2026-11-03T22:03:49+05:00\", \"created_by\": \"Oliver Grant\", \"unit_price\": \"12000\", \"balance_due\": \"2026-12-03\", \"client_name\": \"Sophia Bennett\", \"markup_rate\": \"5\", \"client_email\": \"client@fineworth.test\", \"deposit_date\": \"2026-11-03\", \"brokerage_rate\": \"2\", \"client_address\": \"14 Example Square, London, W1A 1AA\", \"management_rate\": \"2.5\", \"measurement_date\": \"2026-10-28\", \"template_version\": \"demo-2026-11-03\", \"deposit_reference\": \"DEMO-EXTERNAL-20261103\"}",
+                "document_id": 21,
+                "signed_document_id": null
+            },
+            {
+                "id": 22,
+                "client_id": 6,
+                "client_name": "Evelyn Hart — demonstration",
+                "client_email": "evelyn.demo@fineworth.test",
+                "client_address": "14 Example Square, London, W1A 1AA",
+                "created_by": "Oliver Grant",
+                "created_by_id": null,
+                "template_version": "demo-2026-11-03-v2",
+                "currency": "GBP",
+                "balance_due": "2026-12-03",
+                "stock_minor": 600000,
+                "total_minor": 657000,
+                "balance_minor": 507000,
+                "review_note": null,
+                "acknowledged_at": "2026-11-03 17:07:28",
+                "agreement_snapshot": "{\"name\": \"Château Margaux 2018 · signing-ready demo\", \"type\": \"wine\", \"totals\": {\"stock\": 600000, \"total\": 657000, \"markup\": 30000, \"balance\": 507000, \"deposit\": 150000, \"brokerage\": 12000, \"management\": 15000}, \"deposit\": \"1500\", \"storage\": \"London City Bond\", \"vintage\": \"2018\", \"producer\": \"Château Margaux\", \"quantity\": \"24\", \"bottle_ml\": \"750\", \"client_id\": \"6\", \"reference\": \"DEMO-WINE-SIGN-20261103\", \"created_at\": \"2026-11-03T22:07:23+05:00\", \"created_by\": \"Oliver Grant\", \"unit_price\": \"250\", \"balance_due\": \"2026-12-03\", \"client_name\": \"Evelyn Hart — demonstration\", \"markup_rate\": \"5\", \"client_email\": \"evelyn.demo@fineworth.test\", \"deposit_date\": \"2026-11-03\", \"brokerage_rate\": \"2\", \"client_address\": \"14 Example Square, London, W1A 1AA\", \"management_rate\": \"2.5\", \"template_version\": \"demo-2026-11-03-v2\", \"deposit_reference\": \"DEMO-EXTERNAL-20261103\"}",
+                "document_id": 23,
+                "signed_document_id": null
+            },
+            {
+                "id": 24,
+                "client_id": 4,
+                "client_name": "Sophia Bennett",
+                "client_email": "client@fineworth.test",
+                "client_address": "14 Example Square, London, W1A 1AA",
+                "created_by": "Oliver Grant",
+                "created_by_id": null,
+                "template_version": "demo-2026-11-03-v2",
+                "currency": "GBP",
+                "balance_due": "2026-12-03",
+                "stock_minor": 1200000,
+                "total_minor": 1314000,
+                "balance_minor": 1014000,
+                "review_note": null,
+                "acknowledged_at": null,
+                "agreement_snapshot": "{\"abv\": \"59.8\", \"ola\": \"160\", \"rla\": \"145.61\", \"name\": \"Bunnahabhain 2016 · signing-ready demo\", \"type\": \"whisky\", \"totals\": {\"stock\": 1200000, \"total\": 1314000, \"markup\": 60000, \"balance\": 1014000, \"deposit\": 300000, \"brokerage\": 24000, \"management\": 30000}, \"deposit\": \"3000\", \"storage\": \"Islay Bonded Storage\", \"producer\": \"Bunnahabhain\", \"quantity\": \"1\", \"cask_size\": \"250\", \"cask_type\": \"Sherry hogshead\", \"client_id\": \"4\", \"reference\": \"DEMO-CASK-SIGN-20261103\", \"created_at\": \"2026-11-03T22:07:30+05:00\", \"created_by\": \"Oliver Grant\", \"unit_price\": \"12000\", \"balance_due\": \"2026-12-03\", \"client_name\": \"Sophia Bennett\", \"markup_rate\": \"5\", \"client_email\": \"client@fineworth.test\", \"deposit_date\": \"2026-11-03\", \"brokerage_rate\": \"2\", \"client_address\": \"14 Example Square, London, W1A 1AA\", \"management_rate\": \"2.5\", \"measurement_date\": \"2026-10-28\", \"template_version\": \"demo-2026-11-03-v2\", \"deposit_reference\": \"DEMO-EXTERNAL-20261103\"}",
+                "document_id": 25,
+                "signed_document_id": null
+            }
+        ],
+        "deal_items": [
+            {
+                "id": 1,
+                "deal_id": 18,
+                "position": 1,
+                "type": "wine",
+                "name": "Château Margaux 2018 · November demo",
+                "reference": "DEMO-WINE-20261103",
+                "producer": "Château Margaux",
+                "storage": "London City Bond",
+                "quantity": 24,
+                "unit_price_minor": 25000,
+                "cask_type": null,
+                "cask_size": null,
+                "ola": null,
+                "rla": null,
+                "abv": null,
+                "measurement_date": null,
+                "vintage": 2018,
+                "bottle_ml": 750
+            },
+            {
+                "id": 2,
+                "deal_id": 20,
+                "position": 1,
+                "type": "whisky",
+                "name": "Bunnahabhain 2016 · November demo",
+                "reference": "DEMO-CASK-20261103",
+                "producer": "Bunnahabhain",
+                "storage": "Islay Bonded Storage",
+                "quantity": 1,
+                "unit_price_minor": 1200000,
+                "cask_type": "Sherry hogshead",
+                "cask_size": "250.0000",
+                "ola": "160.0000",
+                "rla": "145.6100",
+                "abv": "59.8000",
+                "measurement_date": "2026-10-28",
+                "vintage": null,
+                "bottle_ml": null
+            },
+            {
+                "id": 3,
+                "deal_id": 22,
+                "position": 1,
+                "type": "wine",
+                "name": "Château Margaux 2018 · signing-ready demo",
+                "reference": "DEMO-WINE-SIGN-20261103",
+                "producer": "Château Margaux",
+                "storage": "London City Bond",
+                "quantity": 24,
+                "unit_price_minor": 25000,
+                "cask_type": null,
+                "cask_size": null,
+                "ola": null,
+                "rla": null,
+                "abv": null,
+                "measurement_date": null,
+                "vintage": 2018,
+                "bottle_ml": 750
+            },
+            {
+                "id": 4,
+                "deal_id": 24,
+                "position": 1,
+                "type": "whisky",
+                "name": "Bunnahabhain 2016 · signing-ready demo",
+                "reference": "DEMO-CASK-SIGN-20261103",
+                "producer": "Bunnahabhain",
+                "storage": "Islay Bonded Storage",
+                "quantity": 1,
+                "unit_price_minor": 1200000,
+                "cask_type": "Sherry hogshead",
+                "cask_size": "250.0000",
+                "ola": "160.0000",
+                "rla": "145.6100",
+                "abv": "59.8000",
+                "measurement_date": "2026-10-28",
+                "vintage": null,
+                "bottle_ml": null
+            }
+        ],
+        "deal_fees": [
+            {
+                "id": 1,
+                "deal_id": 18,
+                "type": "markup",
+                "rate": "5.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 30000
+            },
+            {
+                "id": 2,
+                "deal_id": 18,
+                "type": "management",
+                "rate": "2.5000",
+                "basis": "stock_subtotal",
+                "amount_minor": 15000
+            },
+            {
+                "id": 3,
+                "deal_id": 18,
+                "type": "brokerage",
+                "rate": "2.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 12000
+            },
+            {
+                "id": 4,
+                "deal_id": 20,
+                "type": "markup",
+                "rate": "5.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 60000
+            },
+            {
+                "id": 5,
+                "deal_id": 20,
+                "type": "management",
+                "rate": "2.5000",
+                "basis": "stock_subtotal",
+                "amount_minor": 30000
+            },
+            {
+                "id": 6,
+                "deal_id": 20,
+                "type": "brokerage",
+                "rate": "2.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 24000
+            },
+            {
+                "id": 7,
+                "deal_id": 22,
+                "type": "markup",
+                "rate": "5.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 30000
+            },
+            {
+                "id": 8,
+                "deal_id": 22,
+                "type": "management",
+                "rate": "2.5000",
+                "basis": "stock_subtotal",
+                "amount_minor": 15000
+            },
+            {
+                "id": 9,
+                "deal_id": 22,
+                "type": "brokerage",
+                "rate": "2.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 12000
+            },
+            {
+                "id": 10,
+                "deal_id": 24,
+                "type": "markup",
+                "rate": "5.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 60000
+            },
+            {
+                "id": 11,
+                "deal_id": 24,
+                "type": "management",
+                "rate": "2.5000",
+                "basis": "stock_subtotal",
+                "amount_minor": 30000
+            },
+            {
+                "id": 12,
+                "deal_id": 24,
+                "type": "brokerage",
+                "rate": "2.0000",
+                "basis": "stock_subtotal",
+                "amount_minor": 24000
+            }
+        ],
+        "external_deposits": [
+            {
+                "id": 1,
+                "deal_id": 18,
+                "position": 1,
+                "amount_minor": 150000,
+                "reference": "DEMO-EXTERNAL-20261103",
+                "recorded_date": "2026-11-03"
+            },
+            {
+                "id": 2,
+                "deal_id": 20,
+                "position": 1,
+                "amount_minor": 300000,
+                "reference": "DEMO-EXTERNAL-20261103",
+                "recorded_date": "2026-11-03"
+            },
+            {
+                "id": 3,
+                "deal_id": 22,
+                "position": 1,
+                "amount_minor": 150000,
+                "reference": "DEMO-EXTERNAL-20261103",
+                "recorded_date": "2026-11-03"
+            },
+            {
+                "id": 4,
+                "deal_id": 24,
+                "position": 1,
+                "amount_minor": 300000,
+                "reference": "DEMO-EXTERNAL-20261103",
+                "recorded_date": "2026-11-03"
+            }
+        ],
+        "document_versions": [
+            {
+                "id": 8,
+                "client_id": 4,
+                "document_id": 1,
+                "title": "Ownership certificate",
+                "document_date": "2021-06-14",
+                "path": "documents/sample-1.pdf",
+                "original_name": "sample-1.pdf",
+                "holding_id": 1,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Fictional sample document for demonstrating private review and record history.",
+                "signing_hotspots": null,
+                "sha256": "48ce941352b034e5d09a3da388cf0dcd877c1348c7e5963fa0b5fbcaef80893f",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 9,
+                "client_id": 4,
+                "document_id": 2,
+                "title": "Storage confirmation — 2025",
+                "document_date": "2025-08-13",
+                "path": "documents/sample-2.pdf",
+                "original_name": "sample-2.pdf",
+                "holding_id": 1,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Fictional sample document for demonstrating private review and record history.",
+                "signing_hotspots": null,
+                "sha256": "dcef59f4ef78cd5a943b2736654883db4136960c1bdccc32439d6e3a418a7716",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 10,
+                "client_id": 4,
+                "document_id": 2,
+                "title": "Storage confirmation — 2026",
+                "document_date": "2026-08-13",
+                "path": "documents/sample-3.pdf",
+                "original_name": "sample-3.pdf",
+                "holding_id": 1,
+                "deal_id": null,
+                "replaces_id": 9,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Fictional sample document for demonstrating private review and record history.",
+                "signing_hotspots": null,
+                "sha256": "d848f89919552c9200641079b3bd5f9643b8ed7fb75d76eb70f283726ed5ece0",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 11,
+                "client_id": 4,
+                "document_id": 3,
+                "title": "Annual regauge report",
+                "document_date": "2026-10-20",
+                "path": "documents/sample-4.pdf",
+                "original_name": "sample-4.pdf",
+                "holding_id": 1,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Fictional sample document for demonstrating private review and record history.",
+                "signing_hotspots": null,
+                "sha256": "674f0f54f8e8e10885165781d9c216c2a126ef387b9d3667ab6974427ae33d99",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 12,
+                "client_id": 4,
+                "document_id": 4,
+                "title": "Identity verification record",
+                "document_date": "2026-09-01",
+                "path": "documents/sample-5.pdf",
+                "original_name": "sample-5.pdf",
+                "holding_id": null,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Fictional sample document for demonstrating private review and record history.",
+                "signing_hotspots": null,
+                "sha256": "c41bb760b687df7894f2dc37a837c1aebd03441ee2a00e9e080ddd94a32689b9",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 16,
+                "client_id": 4,
+                "document_id": 5,
+                "title": "Regauge report — prototype walkthrough",
+                "document_date": "2026-10-27",
+                "path": "documents/kPyiRbKC7tmch1TmICbfIEKtL8Ckei8nCbzMP3b1.pdf",
+                "original_name": "sample-4.pdf",
+                "holding_id": 1,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Browser walkthrough: manager submission, admin approval and client history.",
+                "signing_hotspots": null,
+                "sha256": "674f0f54f8e8e10885165781d9c216c2a126ef387b9d3667ab6974427ae33d99",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 17,
+                "client_id": 4,
+                "document_id": 6,
+                "title": "Welcome to your vault - onboarding guide",
+                "document_date": "2026-10-29",
+                "path": "documents/demo-onboarding-guide.pdf",
+                "original_name": "fineworth-onboarding-guide.pdf",
+                "holding_id": null,
+                "deal_id": null,
+                "replaces_id": null,
+                "uploaded_by": "Alex Morgan",
+                "uploaded_by_id": 1,
+                "notes": "Read the guide and record your review. Your team will confirm the next step. Fictional demonstration.",
+                "signing_hotspots": null,
+                "sha256": "137f069af9744f1e25d7e35ac717c1966928787af84d9bf7252dbf9324152bdb",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 19,
+                "client_id": 6,
+                "document_id": 7,
+                "title": "Deal FW-18 — Château Margaux 2018 · November demo",
+                "document_date": "2026-11-03",
+                "path": "agreements/885f3135-c388-45fc-ae2c-0251836285e3.pdf",
+                "original_name": "fineworth-deal-18.pdf",
+                "holding_id": null,
+                "deal_id": 18,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Generated from a frozen deal snapshot. Verify client, stock, deposit and fee basis before publication.",
+                "signing_hotspots": null,
+                "sha256": "c28bf367d2858535fd8d01886bef5d78e65ae56dcc18ad5b82e06f4ee6dcaf4a",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 21,
+                "client_id": 4,
+                "document_id": 8,
+                "title": "Deal FW-20 — Bunnahabhain 2016 · November demo",
+                "document_date": "2026-11-03",
+                "path": "agreements/64d02fcc-8e79-4b95-b411-dd8ccfed27b1.pdf",
+                "original_name": "fineworth-deal-20.pdf",
+                "holding_id": null,
+                "deal_id": 20,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Generated from a frozen deal snapshot. Verify client, stock, deposit and fee basis before publication.",
+                "signing_hotspots": null,
+                "sha256": "22ccfd46285ce979fc741cbc3024d36bd962974648bd8396bec4f327370f1246",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 23,
+                "client_id": 6,
+                "document_id": 9,
+                "title": "Deal FW-22 — Château Margaux 2018 · signing-ready demo",
+                "document_date": "2026-11-03",
+                "path": "agreements/16b8a15a-33b0-4e0e-96c1-8bd94ac993ca.pdf",
+                "original_name": "fineworth-deal-22.pdf",
+                "holding_id": null,
+                "deal_id": 22,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Generated from a frozen deal snapshot. Verify client, stock, deposit and fee basis before publication.",
+                "signing_hotspots": null,
+                "sha256": "bffc2b7e3295a89777aa3c05b6ce341f67cd7341a8899ffa1a20e0b8214b52de",
+                "onboarding_purpose": null
+            },
+            {
+                "id": 25,
+                "client_id": 4,
+                "document_id": 10,
+                "title": "Deal FW-24 — Bunnahabhain 2016 · signing-ready demo",
+                "document_date": "2026-11-03",
+                "path": "agreements/f003955a-d04b-405c-8b21-fba3dc7ec343.pdf",
+                "original_name": "fineworth-deal-24.pdf",
+                "holding_id": null,
+                "deal_id": 24,
+                "replaces_id": null,
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": 2,
+                "notes": "Generated from a frozen deal snapshot. Verify client, stock, deposit and fee basis before publication.",
+                "signing_hotspots": null,
+                "sha256": "ae70d586cf20ff89a8ab81e8ff0b5e709dd41a4e5cdcb591f0d2dc3d9d8bc394",
+                "onboarding_purpose": null
+            }
+        ],
+        "document_reviews": [
+            {
+                "id": 1,
+                "document_version_id": 8,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2021-06-14 07:00:00",
+                "review_note": null
+            },
+            {
+                "id": 2,
+                "document_version_id": 9,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2025-08-13 07:00:00",
+                "review_note": null
+            },
+            {
+                "id": 3,
+                "document_version_id": 10,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-08-13 07:00:00",
+                "review_note": null
+            },
+            {
+                "id": 4,
+                "document_version_id": 12,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-09-01 07:00:00",
+                "review_note": null
+            },
+            {
+                "id": 5,
+                "document_version_id": 16,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-10-27 18:27:46",
+                "review_note": "Reviewed sample report. Approved for the client history."
+            },
+            {
+                "id": 6,
+                "document_version_id": 17,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-10-29 17:01:39",
+                "review_note": null
+            },
+            {
+                "id": 7,
+                "document_version_id": 19,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-11-03 17:03:44",
+                "review_note": null
+            },
+            {
+                "id": 8,
+                "document_version_id": 21,
+                "decision": "rejected",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-11-03 17:13:55",
+                "review_note": "Superseded by the signing-ready demonstration. Original snapshot retained."
+            },
+            {
+                "id": 9,
+                "document_version_id": 23,
+                "decision": "approved",
+                "reviewed_by_id": null,
+                "reviewed_by": "Alex Morgan",
+                "reviewed_at": "2026-11-03 17:07:25",
+                "review_note": null
+            }
+        ],
+        "signing_requests": [],
+        "service_requests": [
+            {
+                "id": 13,
+                "client_id": 4,
+                "holding_id": 2,
+                "type": "Photographs",
+                "holding_name": "Bunnahabhain 2016",
+                "notes": "Please arrange recent photographs of the cask and its warehouse markings.",
+                "staff_note": "We have contacted the warehouse and are awaiting their response."
+            },
+            {
+                "id": 15,
+                "client_id": 4,
+                "holding_id": 1,
+                "type": "Evaluation",
+                "holding_name": "Macallan 2019",
+                "notes": "Please arrange a current regauge report for this cask. Prototype walkthrough request.",
+                "staff_note": null
+            }
+        ],
+        "request_events": [
+            {
+                "id": 1,
+                "request_id": 13,
+                "position": 1,
+                "status": "in progress",
+                "staff_note": "Warehouse contacted.",
+                "by": "Oliver Grant",
+                "actor_id": null,
+                "at": "2026-10-26 05:00:00"
+            }
+        ],
+        "profile_changes": [
+            {
+                "id": 14,
+                "client_id": 4,
+                "name": "Sophia R. Bennett",
+                "notes": "Demonstration: client requested a correction to the display name.",
+                "uploaded_by": "Oliver Grant",
+                "uploaded_by_id": null,
+                "reviewed_by": null,
+                "reviewed_by_id": null,
+                "reviewed_at": null,
+                "review_note": null
+            }
+        ],
+        "document_acknowledgements": [],
+        "direct_signatures": [
+            {
+                "id": 26,
+                "client_id": 1,
+                "token": "ed12410c-1081-4ee0-9068-f624665c623d",
+                "name": "Alexander Morgan",
+                "method": "type",
+                "signed_at": "2026-11-04 12:04:42",
+                "path": "direct-signing/1/ed12410c-1081-4ee0-9068-f624665c623d.pdf",
+                "source_sha256": "ed3476013c0613067c45fa6308ec0e4ab076a95cebec7f29b3cf18e74163073d",
+                "signed_sha256": "9bc971ce3e303dcc7079c9394e96630075b26661fe39ff42604d618a52b82378",
+                "consent": "I have reviewed the sample agreement and agree to apply this signature for this demonstration.",
+                "signing_hotspots": null,
+                "placement": "{\"x\": \"0.1\", \"y\": \"0.65\", \"page\": \"2\", \"width\": \"0.32\"}",
+                "variant": null
+            },
+            {
+                "id": 27,
+                "client_id": 1,
+                "token": "3af07ac7-4da9-4809-a38c-f7b190b86238",
+                "name": "Salman Ahmed",
+                "method": "type",
+                "signed_at": "2026-11-04 12:09:12",
+                "path": "direct-signing/1/3af07ac7-4da9-4809-a38c-f7b190b86238.pdf",
+                "source_sha256": "ed3476013c0613067c45fa6308ec0e4ab076a95cebec7f29b3cf18e74163073d",
+                "signed_sha256": "27391f0227faf75b9c31ae0b4c092fca4ce7cb01fa7c6682d191f822dc964bf6",
+                "consent": "I have reviewed the sample agreement and agree to apply this signature for this demonstration.",
+                "signing_hotspots": null,
+                "placement": "{\"x\": \"0.08939320388349514\", \"y\": \"0.6591946264573701\", \"page\": \"2\", \"width\": \"0.32\"}",
+                "variant": null
+            },
+            {
+                "id": 28,
+                "client_id": 1,
+                "token": "2fc7c180-100f-485f-89c9-50dd981d2b2d",
+                "name": "john doe",
+                "method": "draw",
+                "signed_at": "2026-11-04 12:20:50",
+                "path": "direct-signing/1/2fc7c180-100f-485f-89c9-50dd981d2b2d.pdf",
+                "source_sha256": "ed3476013c0613067c45fa6308ec0e4ab076a95cebec7f29b3cf18e74163073d",
+                "signed_sha256": "e02572adba8114b86718f087fa2880e3b253f23861f6c56647218576d0cd0203",
+                "consent": "I have reviewed the sample agreement and agree to apply this signature for this demonstration.",
+                "signing_hotspots": null,
+                "placement": "{\"x\": \"0.1\", \"y\": \"0.65\", \"page\": \"2\", \"width\": \"0.32\"}",
+                "variant": null
+            },
+            {
+                "id": 29,
+                "client_id": 1,
+                "token": "587755f8-aa24-46a2-bba1-25279847454b",
+                "name": "Alexander Morgan",
+                "method": "type",
+                "signed_at": "2026-11-04 12:31:40",
+                "path": "direct-signing/1/587755f8-aa24-46a2-bba1-25279847454b.pdf",
+                "source_sha256": "27f9c7671296288c72fecc5c53e456c61559d3055c10b0ea0ed2f26468d87f90",
+                "signed_sha256": "69f8597bb887eea1515f84ceae8bb58dfb322922059f4fb3749bd92d8890033a",
+                "consent": "I have reviewed the sample agreement and agree to apply this signature for this demonstration.",
+                "signing_hotspots": "{\"units\": \"pt\", \"fields\": {\"full_name\": {\"x\": 40, \"y\": 173.755, \"page\": 4, \"width\": 360, \"height\": 24}, \"signature\": {\"x\": 40, \"y\": 90.1284, \"page\": 4, \"width\": 208, \"height\": 52}, \"signed_date\": {\"x\": 323.404, \"y\": 122.1284, \"page\": 4, \"width\": 150, \"height\": 20}}, \"origin\": \"top-left\", \"version\": 1, \"page_count\": 4, \"page_width\": 595.28, \"page_height\": 841.89, \"source_sha256\": \"27f9c7671296288c72fecc5c53e456c61559d3055c10b0ea0ed2f26468d87f90\"}",
+                "placement": null,
+                "variant": "extended"
+            }
+        ],
+        "holding_updates": [],
+        "holding_update_files": [],
+        "holding_publications": [],
+        "audit_events": [
+            {
+                "id": 1,
+                "actor_id": null,
+                "entry_id": 1,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 2,
+                "actor_id": null,
+                "entry_id": 2,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 3,
+                "actor_id": null,
+                "entry_id": 3,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 4,
+                "actor_id": null,
+                "entry_id": 4,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 5,
+                "actor_id": null,
+                "entry_id": 5,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 6,
+                "actor_id": null,
+                "entry_id": 6,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 7,
+                "actor_id": null,
+                "entry_id": 7,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "In storage",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 8,
+                "actor_id": null,
+                "entry_id": 8,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 9,
+                "actor_id": null,
+                "entry_id": 9,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 10,
+                "actor_id": null,
+                "entry_id": 10,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 11,
+                "actor_id": null,
+                "entry_id": 11,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "pending",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 12,
+                "actor_id": null,
+                "entry_id": 12,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 13,
+                "actor_id": null,
+                "entry_id": 13,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "in progress",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 14,
+                "actor_id": null,
+                "entry_id": 14,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "pending",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 15,
+                "actor_id": null,
+                "entry_id": 15,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "submitted",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 16,
+                "actor_id": null,
+                "entry_id": 16,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 17,
+                "actor_id": null,
+                "entry_id": 17,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 18,
+                "actor_id": null,
+                "entry_id": 18,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "reviewed",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 19,
+                "actor_id": null,
+                "entry_id": 19,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 20,
+                "actor_id": null,
+                "entry_id": 20,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "rejected",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 21,
+                "actor_id": null,
+                "entry_id": 21,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "rejected",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 22,
+                "actor_id": null,
+                "entry_id": 22,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "reviewed",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 23,
+                "actor_id": null,
+                "entry_id": 23,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "approved",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 24,
+                "actor_id": null,
+                "entry_id": 24,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "pending",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 25,
+                "actor_id": null,
+                "entry_id": 25,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "pending",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 26,
+                "actor_id": null,
+                "entry_id": 26,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "completed",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 27,
+                "actor_id": null,
+                "entry_id": 27,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "completed",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 28,
+                "actor_id": null,
+                "entry_id": 28,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "completed",
+                "occurred_at": "2026-11-04 23:11:08"
+            },
+            {
+                "id": 29,
+                "actor_id": null,
+                "entry_id": 29,
+                "subject_user_id": null,
+                "action": "legacy.imported",
+                "previous_status": null,
+                "new_status": "completed",
+                "occurred_at": "2026-11-04 23:11:08"
+            }
+        ],
+        "portal_notifications": []
+    },
+    "manager_ids": {
+        "4": [
+            2
+        ],
+        "5": [
+            3
+        ],
+        "6": [
+            2
+        ]
+    },
+    "files": {
+        "documents/sample-1.pdf": "48ce941352b034e5d09a3da388cf0dcd877c1348c7e5963fa0b5fbcaef80893f",
+        "documents/sample-2.pdf": "dcef59f4ef78cd5a943b2736654883db4136960c1bdccc32439d6e3a418a7716",
+        "documents/sample-3.pdf": "d848f89919552c9200641079b3bd5f9643b8ed7fb75d76eb70f283726ed5ece0",
+        "documents/sample-4.pdf": "674f0f54f8e8e10885165781d9c216c2a126ef387b9d3667ab6974427ae33d99",
+        "documents/sample-5.pdf": "c41bb760b687df7894f2dc37a837c1aebd03441ee2a00e9e080ddd94a32689b9",
+        "documents/kPyiRbKC7tmch1TmICbfIEKtL8Ckei8nCbzMP3b1.pdf": "674f0f54f8e8e10885165781d9c216c2a126ef387b9d3667ab6974427ae33d99",
+        "documents/demo-onboarding-guide.pdf": "137f069af9744f1e25d7e35ac717c1966928787af84d9bf7252dbf9324152bdb",
+        "agreements/885f3135-c388-45fc-ae2c-0251836285e3.pdf": "c28bf367d2858535fd8d01886bef5d78e65ae56dcc18ad5b82e06f4ee6dcaf4a",
+        "agreements/64d02fcc-8e79-4b95-b411-dd8ccfed27b1.pdf": "22ccfd46285ce979fc741cbc3024d36bd962974648bd8396bec4f327370f1246",
+        "agreements/16b8a15a-33b0-4e0e-96c1-8bd94ac993ca.pdf": "bffc2b7e3295a89777aa3c05b6ce341f67cd7341a8899ffa1a20e0b8214b52de",
+        "agreements/f003955a-d04b-405c-8b21-fba3dc7ec343.pdf": "ae70d586cf20ff89a8ab81e8ff0b5e709dd41a4e5cdcb591f0d2dc3d9d8bc394",
+        "direct-signing/1/ed12410c-1081-4ee0-9068-f624665c623d.pdf": "9bc971ce3e303dcc7079c9394e96630075b26661fe39ff42604d618a52b82378",
+        "direct-signing/1/3af07ac7-4da9-4809-a38c-f7b190b86238.pdf": "27391f0227faf75b9c31ae0b4c092fca4ce7cb01fa7c6682d191f822dc964bf6",
+        "direct-signing/1/2fc7c180-100f-485f-89c9-50dd981d2b2d.pdf": "e02572adba8114b86718f087fa2880e3b253f23861f6c56647218576d0cd0203",
+        "direct-signing/1/587755f8-aa24-46a2-bba1-25279847454b.pdf": "69f8597bb887eea1515f84ceae8bb58dfb322922059f4fb3749bd92d8890033a"
+    }
+}
