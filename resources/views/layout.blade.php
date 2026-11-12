@@ -11,8 +11,7 @@ try {
 } catch {}
 </script>
 <aside class="sidebar" id="navigation">
-    <a class="brand" href="/dashboard"><span class="monogram">F<span>W</span></span><span>FINEWORTH<small>PRIVATE CLIENT PORTAL</small></span></a>
-    <div class="workspace"><span class="workspace-icon">FW</span><div>{{ auth()->user()->role === 'client' ? 'My private vault' : 'Portfolio workspace' }}<small>{{ ucfirst(auth()->user()->role) }} access</small></div><span class="dot"></span></div>
+    <a class="brand" href="/dashboard" aria-label="Fineworth dashboard"><img src="/images/fineworth-logo-white.svg" alt="Fineworth" width="277" height="32"></a>
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
         @php($navigation = ['dashboard'=>['Overview','grid'], 'holdings'=>['Holdings','bottle'], 'requests'=>['Service requests','message']])
