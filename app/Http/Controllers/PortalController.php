@@ -21,11 +21,21 @@ class PortalController extends Controller
     {
         $credentials = $request->validate(['email' => 'required|email', 'password' => 'required|string']);
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            if ($request->expectsJson()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'These credentials do not match our records.',
+                ]);
+            }
             return back()->withErrors(['email' => 'These credentials do not match our records.'])->onlyInput('email');
         }
         $request->session()->regenerate();
 
-        return redirect()->intended('/dashboard');
+        $destination = redirect()->intended('/dashboard');
+        if ($request->expectsJson()) {
+            return response()->json(['destination' => $destination->getTargetUrl()]);
+        }
+
+        return $destination;
     }
 
     public function acknowledge(Request $request, int $id)

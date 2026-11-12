@@ -1,10 +1,20 @@
 @extends('layout', ['title' => 'Access your vault'])
+@php($cinematic = app()->environment('local', 'staging') && request()->boolean('animated'))
 @push('styles')
+@if($cinematic)
+<link rel="stylesheet" href="/vault-cinematic.css">
+<script src="/vault-cinematic.js" defer></script>
+@else
 <link rel="preload" href="/images/login-background.webp" as="image" type="image/webp">
+@endif
 <link rel="stylesheet" href="/login.css">
 @endpush
 @section('content')
-<main class="vault-login">
+<main class="vault-login{{ $cinematic ? ' cinematic-preview' : '' }}">
+    @if($cinematic)
+        <video class="unlock-film" muted playsinline preload="none" aria-hidden="true"></video>
+        <button class="unlock-skip" hidden type="button">Continue</button>
+    @endif
     <div class="vault-login-content">
         <a class="vault-login-brand" href="/login" aria-label="Fineworth home">
             <img src="/images/fineworth-logo-orange.png" alt="Fineworth" width="2048" height="401">

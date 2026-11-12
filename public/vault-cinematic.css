@@ -1,0 +1,19 @@
+.vault-login.cinematic-preview {
+    position: relative;
+    isolation: isolate;
+    background-image: url('/media/vault/desktop.webp');
+    background-position: center;
+}
+@media (orientation: portrait) {
+    .vault-login.cinematic-preview { background-image: url('/media/vault/mobile.webp'); background-position: center; }
+}
+.unlock-film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; }
+.cinematic-preview .vault-login-content { position: relative; transition: transform 350ms ease-in, opacity 300ms ease; }
+.cinematic-preview.unlocking .vault-login-content { transform: translateX(-60px); opacity: 0; pointer-events: none; }
+.cinematic-preview.unlocking .unlock-film { opacity: 1; }
+.unlock-skip { position: absolute; z-index: 1; right: 24px; bottom: 24px; background: #162019; color: white; }
+.unlock-skip[hidden], .cinematic-preview [role="alert"][hidden] { display: none; }
+.cinematic-preview.leaving { opacity: 0; transition: opacity 160ms ease; }
+@media (prefers-reduced-motion: reduce) {
+    .cinematic-preview .vault-login-content, .cinematic-preview.leaving { transition: none; }
+}

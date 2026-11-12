@@ -3,6 +3,13 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#222d25"><title>{{ $title ?? 'Your private vault' }} · Fineworth</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script><link rel="stylesheet" href="/workflow.css"><script src="/workflow.js" defer></script>@stack('styles')</head>
 <body class="{{ request()->is('login') ? 'login-body' : '' }}" data-old="{{ json_encode(collect(old())->except(['_token','password'])->all()) }}">
 @auth
+<script>
+try {
+    const arrival = Number(sessionStorage.getItem('vault-arrival'));
+    sessionStorage.removeItem('vault-arrival');
+    if (arrival && Date.now() - arrival < 10000) document.body.classList.add('vault-arrival');
+} catch {}
+</script>
 <aside class="sidebar" id="navigation">
     <a class="brand" href="/dashboard"><span class="monogram">F<span>W</span></span><span>FINEWORTH<small>PRIVATE CLIENT PORTAL</small></span></a>
     <div class="workspace"><span class="workspace-icon">FW</span><div>{{ auth()->user()->role === 'client' ? 'My private vault' : 'Portfolio workspace' }}<small>{{ ucfirst(auth()->user()->role) }} access</small></div><span class="dot"></span></div>
