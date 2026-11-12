@@ -1,0 +1,108 @@
+/* Lossless WebP of the supplied Fineworth vault artwork. */
+.login-body { background: #080c09; color: #f7f3e9; }
+.vault-login {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    padding: 48px 0;
+    background-image: linear-gradient(90deg, rgb(4 8 6 / 22%), transparent 65%), url('/images/login-background.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.vault-login-content { width: min(calc(100% - 48px), 400px); justify-self: center; }
+.vault-login-brand { display: block; margin-bottom: 28px; }
+.vault-login-brand img { display: block; width: 100%; height: auto; filter: brightness(0) invert(1); }
+.vault-login-brand span {
+    display: block;
+    margin: -6px 0 0;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #e0ded4;
+}
+.vault-login-panel {
+    padding: 28px;
+    border: 1px solid rgb(230 205 164 / 22%);
+    border-radius: 14px;
+    background: rgb(255 255 255 / 10%);
+    box-shadow: 0 18px 56px rgb(0 0 0 / 22%), inset 0 1px 0 rgb(255 255 255 / 5%);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+.vault-login-heading { margin-bottom: 22px; }
+.vault-login-eyebrow { margin: 0 0 9px; color: #d4af79; font-size: 10px; font-weight: 600; letter-spacing: 1.8px; text-transform: uppercase; }
+.vault-login-heading h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 34px; font-weight: 400; line-height: 1.15; margin: 0 0 8px; }
+.vault-login-heading > p:last-child { margin: 0; font-size: 13px; color: #c7c9be; }
+.vault-login-fields { display: grid; gap: 14px; }
+.vault-login-fields > label { margin: 0; font-size: 12px; font-weight: 500; color: #e8e8de; }
+.vault-login-fields > label:not(:first-of-type) { margin-top: 7px; }
+.vault-login-fields input:not([type='checkbox']) {
+    width: 100%; min-width: 0; height: 56px; margin: 0; padding: 23px 13px 7px;
+    border: 0; border-bottom: 1px solid rgb(235 235 218 / 45%); border-radius: 0;
+    background: rgb(255 255 255 / 5%); color: #fffef7; font-size: 14px; color-scheme: dark;
+}
+.vault-login-field { position: relative; }
+.vault-login-field > label {
+    position: absolute; top: 50%; left: 13px; margin: 0;
+    transform: translateY(-50%); transform-origin: left top;
+    font-size: 14px; font-weight: 400; line-height: 1;
+    color: #c7c9be; pointer-events: none;
+    transition: top 160ms ease, transform 160ms ease, font-size 160ms ease, color 160ms ease;
+}
+.vault-login-field:focus-within > label,
+.vault-login-field.has-value > label,
+.vault-login-field input:is(:autofill, :-webkit-autofill) + label {
+    top: 9px; transform: translateY(0); font-size: 10px;
+}
+.vault-login-field:focus-within > label { color: #e3c28f; }
+.vault-login-fields input:not([type='checkbox']):focus-visible { outline: none; border-bottom: 2px solid #d4af79; }
+.vault-login-fields input:-webkit-autofill { -webkit-text-fill-color: #fffef7; box-shadow: 0 0 0 1000px #263027 inset; }
+.vault-login-password { position: relative; }
+.vault-login-password input { padding-right: 56px !important; }
+.vault-login-password .password-toggle {
+    position: absolute; right: 3px; top: 3px; width: 44px; height: 50px; padding: 0;
+    border: 0; background: transparent; color: #d8bf97; font-size: 12px;
+}
+.password-toggle span { display: flex; align-items: center; justify-content: center; }
+.password-toggle[aria-pressed='false'] .password-hide-icon,
+.password-toggle[aria-pressed='true'] .password-show-icon { display: none; }
+.vault-login-fields .vault-login-remember {
+    display: flex; align-items: center; gap: 9px; margin: 6px 0 9px;
+    font-size: 12px; font-weight: 400; color: #c7c9be;
+}
+.vault-login-remember input { width: 15px; height: 15px; margin: 0; accent-color: #d4af79; }
+.vault-login-submit {
+    width: 100%; min-height: 45px; padding: 11px 16px; border: 1px solid #d6b17f;
+    border-radius: 7px; background: #d6b17f; color: #182119; font-size: 13px;
+    font-weight: 600; justify-content: space-between;
+}
+.vault-login-submit:hover { background: #e5c397; }
+.vault-login-help { margin: 20px 0 0; text-align: center; font-size: 11px; color: #c7c9be; }
+.vault-login-footer { margin: 21px 0 0; text-align: center; font-size: 11px; letter-spacing: .6px; color: #c6c7b8; }
+.vault-login-error { margin-bottom: 18px; padding: 10px 12px; border: 1px solid #ca9382; border-radius: 6px; background: #3e2424; color: #ffded3; font-size: 13px; }
+@media (max-width: 900px) {
+    .vault-login { grid-template-columns: minmax(0, 1fr); padding: 36px 24px; }
+    .vault-login-content { width: min(100%, 400px); }
+}
+@media (max-width: 760px) {
+    .vault-login { padding: 36px 24px; background-position: 38% center; }
+    .vault-login-content { margin: auto; width: min(100%, 380px); }
+    .vault-login-panel { padding: 25px; }
+    .vault-login-brand { margin-bottom: 23px; }
+    .vault-login-brand span { font-size: 9px; letter-spacing: 1px; }
+}
+@media (max-width: 360px) {
+    .vault-login { padding: 28px 18px; }
+    .vault-login-panel { padding: 22px; }
+    .vault-login-brand span { font-size: 8px; letter-spacing: .7px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .vault-login-panel { background: #111b14; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

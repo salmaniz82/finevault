@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#222d25"><title>{{ $title ?? 'Your private vault' }} · Fineworth</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script><link rel="stylesheet" href="/workflow.css"><script src="/workflow.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#222d25"><title>{{ $title ?? 'Your private vault' }} · Fineworth</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script><link rel="stylesheet" href="/workflow.css"><script src="/workflow.js" defer></script>@stack('styles')</head>
 <body class="{{ request()->is('login') ? 'login-body' : '' }}" data-old="{{ json_encode(collect(old())->except(['_token','password'])->all()) }}">
 @auth
 <aside class="sidebar" id="navigation">

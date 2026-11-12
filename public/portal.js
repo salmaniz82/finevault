@@ -1,3 +1,17 @@
+const floatingFields = document.querySelectorAll('.vault-login-field');
+const syncFloatingLabels = () => floatingFields.forEach(field => {
+    field.classList.toggle('has-value', field.querySelector('input').value.length > 0);
+});
+floatingFields.forEach(field => {
+    const input = field.querySelector('input');
+    input.addEventListener('input', syncFloatingLabels);
+    input.addEventListener('change', syncFloatingLabels);
+    input.addEventListener('focus', syncFloatingLabels);
+    input.addEventListener('blur', syncFloatingLabels);
+});
+syncFloatingLabels();
+window.addEventListener('pageshow', syncFloatingLabels);
+
 document.querySelectorAll('[data-demo]').forEach(button => button.addEventListener('click', () => {
     document.querySelector('[name=email]').value = button.dataset.demo;
     document.querySelector('[name=password]').value = 'FineworthDemo!27';
@@ -5,7 +19,8 @@ document.querySelectorAll('[data-demo]').forEach(button => button.addEventListen
 document.querySelector('.password-toggle')?.addEventListener('click', event => {
     const input = document.querySelector('#password');
     input.type = input.type === 'password' ? 'text' : 'password';
-    event.target.textContent = input.type === 'password' ? 'Show' : 'Hide';
+    event.currentTarget.setAttribute('aria-label', input.type === 'password' ? 'Show password' : 'Hide password');
+    event.currentTarget.setAttribute('aria-pressed', String(input.type !== 'password'));
 });
 document.querySelector('.mobile-menu')?.addEventListener('click', event => {
     const open = document.querySelector('.sidebar').classList.toggle('is-open');

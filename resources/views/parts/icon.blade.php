@@ -11,5 +11,7 @@
 @case('arrow')<path d="M5 12h14 m-5-5 5 5-5 5"/>@break
 @case('plus')<path d="M12 5v14 M5 12h14"/>@break
 @case('search')<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>@break
+@case('eye')<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>@break
+@case('eye-off')<path d="m3 3 18 18 M10.6 5.1A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3 3.9 M6.1 6.1A21 21 0 0 0 2 12s3.5 7 10 7a13 13 0 0 0 5.9-1.4 M9.9 9.9a3 3 0 0 0 4.2 4.2"/>@break
 @default <circle cx="12" cy="12" r="9"/><path d="M12 8v5 M12 16h.01"/>
 @endswitch</svg>
