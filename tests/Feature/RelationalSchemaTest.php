@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 class RelationalSchemaTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Support\WorkflowFixtures;
 
     protected function setUp(): void
     {
@@ -102,6 +102,7 @@ class RelationalSchemaTest extends TestCase
     {
         $doc = PortalEntry::where('kind', 'document')->whereField('category', 'Onboarding')->firstOrFail();
         $client = User::findOrFail($doc->client_id);
+        $this->approveClient($client);
         $this->actingAs($client)->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertRedirect();
         $this->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertRedirect();
         $this->assertDatabaseCount('document_acknowledgements', 1);

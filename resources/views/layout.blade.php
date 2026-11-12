@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#222d25"><title>{{ $title ?? 'Your private vault' }} · Fineworth</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#222d25"><title>{{ $title ?? 'Your private vault' }} · Fineworth</title><link rel="stylesheet" href="/portal.css"><script src="/portal.js" defer></script><link rel="stylesheet" href="/workflow.css"><script src="/workflow.js" defer></script></head>
 <body class="{{ request()->is('login') ? 'login-body' : '' }}" data-old="{{ json_encode(collect(old())->except(['_token','password'])->all()) }}">
 @auth
 <aside class="sidebar" id="navigation">
@@ -8,14 +8,18 @@
     <div class="workspace"><span class="workspace-icon">FW</span><div>{{ auth()->user()->role === 'client' ? 'My private vault' : 'Portfolio workspace' }}<small>{{ ucfirst(auth()->user()->role) }} access</small></div><span class="dot"></span></div>
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
-        @php($navigation = ['dashboard'=>['Overview','grid'], 'holdings'=>['Holdings','bottle'], 'documents'=>['Documents','file'], 'requests'=>['Service requests','message']])
-        @if(auth()->user()->role !== 'manager') @php($navigation = array_slice($navigation,0,1,true) + ['deals'=>['Deals & agreements','file']] + array_slice($navigation,1,null,true)) @endif
+        @php($navigation = ['dashboard'=>['Overview','grid'], 'holdings'=>['Holdings','bottle'], 'requests'=>['Service requests','message']])
+        @if(auth()->user()->role !== 'manager') @php($navigation = array_slice($navigation,0,1,true) + ['deals'=>['Agreements','file']] + array_slice($navigation,1,null,true)) @endif
         @if(auth()->user()->role !== 'client') @php($navigation += ['clients'=>['Clients','users']]) @endif
-        @if(auth()->user()->role === 'admin') @php($navigation += ['managers'=>['Managers','shield'], 'approvals'=>['Review & approvals','check']]) @endif
+        @if(auth()->user()->role === 'admin') @php($navigation += ['managers'=>['Managers','shield'], 'activity'=>['Activity log','file']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['signing-demo'=>['Signing demo','file']]) @endif
         @if(auth()->user()->role === 'admin') @php($navigation += ['direct-signing-demo'=>['Direct signing demo','file']]) @endif
+        @php($navigation += ['notifications'=>['Notifications','message']])
+        @if(auth()->user()->role === 'client') @php($navigation = \App\Services\Workflow::approved(auth()->user()) ? $navigation + ['onboarding'=>['Onboarding','users']] : ['onboarding'=>['Onboarding','users'],'notifications'=>['Notifications','message']]) @endif
+        @if(auth()->user()->role === 'client' && \App\Services\Workflow::approved(auth()->user()) && !\App\Services\Workflow::fullAccess(auth()->user())) @php($navigation = ['deals'=>['Agreements','file'],'onboarding'=>['Onboarding','users'],'notifications'=>['Notifications','message']]) @endif
         @foreach($navigation as $path => [$label, $icon])
-        <a href="/{{ $path }}" class="{{ request()->segment(1) === $path || ($path === 'holdings' && request()->segment(1) === 'holding') || ($path === 'clients' && request()->segment(1) === 'client') ? 'active' : '' }}">@include('parts.icon', ['name'=>$icon]) {{ $label }} @if($path === 'approvals' && isset($records) && $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count())<span class="nav-count">{{ $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count() }}</span>@endif</a>
+        <a href="/{{ $path }}" class="{{ request()->segment(1) === $path || ($path === 'holdings' && request()->segment(1) === 'holding') || ($path === 'clients' && request()->segment(1) === 'client') ? 'active' : '' }}">@include('parts.icon', ['name'=>$icon]) {{ $label }} @if($path === 'notifications')<span class="nav-count">{{ \Illuminate\Support\Facades\DB::table('portal_notifications')->where('user_id',auth()->id())->whereNull('read_at')->count() }}</span>@endif
+@if($path === 'approvals' && isset($records) && $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count())<span class="nav-count">{{ $records->whereIn('kind',['document','profile'])->where('data.status','pending')->count() }}</span>@endif</a>
         @endforeach
     </nav>
     <div class="sidebar-bottom"><div class="vault-note">@include('parts.icon',['name'=>'shield'])<div>Safely held.<small>Your collection. One private space.</small></div></div><a href="/account" class="user-block"><span class="avatar">{{ substr(auth()->user()->name,0,1) }}{{ substr(strrchr(auth()->user()->name,' '),1,1) }}</span><span>{{ auth()->user()->name }}<small>{{ ucfirst(auth()->user()->role) }} account</small></span><span>↗</span></a></div>

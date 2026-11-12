@@ -5,247 +5,180 @@ namespace Tests\Feature;
 use App\Models\Holding;
 use App\Models\PortalEntry;
 use App\Models\User;
-use App\Services\HoldingMeasurements;
 use Database\Seeders\PrototypeSeeder;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Tests\Support\WorkflowFixtures;
 use Tests\TestCase;
 
 class PortalTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, WorkflowFixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('local');
         $this->seed(PrototypeSeeder::class);
+        foreach (User::where('role', 'client')->get() as $client) {
+            $this->approveClient($client);
+            $agreement = $this->signedAgreement($client);
+            Holding::where('client_id', $client->id)->update(['agreement_id' => $agreement->id, 'released_at' => now()]);
+        }
     }
 
     private function actor(string $role): User
     {
         return User::where('email', match ($role) {
-            'admin' => 'admin@fineworth.test','manager' => 'manager@fineworth.test','other' => 'james@fineworth.test',default => 'client@fineworth.test'
+            'admin' => 'admin@fineworth.test', 'manager' => 'manager@fineworth.test', 'other' => 'james@fineworth.test', default => 'client@fineworth.test',
         })->firstOrFail();
     }
 
-    public function test_all_role_screens_render(): void
+    public function test_role_screens_and_replaced_navigation(): void
     {
-        $this->get('/login')->assertOk()->assertSee('Welcome back.');
         foreach (['admin', 'manager', 'client'] as $role) {
             $this->actingAs($this->actor($role));
-            foreach (['dashboard', 'holdings', 'documents', 'requests', 'account', 'holding/'.Holding::where('reference', 'FW-C4188')->value('id')] as $path) {
+            foreach (['dashboard', 'holdings', 'requests', 'account', 'notifications', 'holding/'.Holding::where('reference', 'FW-C4188')->value('id')] as $path) {
                 $this->get('/'.$path)->assertOk();
             }
             if ($role !== 'client') {
-                foreach (['clients', 'client/'.$this->actor('client')->id] as $path) {
-                    $this->get('/'.$path)->assertOk();
-                }
-            }
-            if ($role === 'admin') {
-                foreach (['managers', 'approvals'] as $path) {
-                    $this->get('/'.$path)->assertOk();
-                }
+                $this->get('/clients')->assertOk();
+                $this->get('/client/'.$this->actor('client')->id)->assertOk();
+                $this->get('/clients/'.$this->actor('client')->id.'/onboarding')->assertOk();
             }
         }
+        $this->actingAs($this->actor('admin'))->get('/activity')->assertOk();
+        $this->get('/approvals')->assertRedirect('/activity');
+        $this->get('/documents')->assertRedirect('/clients');
+        $this->actingAs($this->actor('manager'))->get('/activity')->assertForbidden();
+        $this->get('/deals')->assertForbidden();
+        $this->get('/dashboard')->assertDontSee('Client onboarding')->assertDontSee('href="/documents"', false);
     }
 
-    public function test_missing_record_ids_fail_as_not_found(): void
+    public function test_onboarding_gate_verification_and_admin_review(): void
     {
-        $this->actingAs($this->actor('admin'))->get('/holding')->assertNotFound();
-        $this->get('/client')->assertNotFound();
+        $client = $this->actor('client');
+        $client->clientProfile->update(['onboarding_status' => 'draft']);
+        $client->forceFill(['email_verified_at' => null])->save();
+        $this->actingAs($client->fresh())->get('/dashboard')->assertRedirect('/onboarding');
+        $holding = Holding::where('client_id', $client->id)->first();
+        $this->get('/holding/'.$holding->id)->assertRedirect('/onboarding');
+        $this->get('/onboarding')->assertOk()->assertSee('Identity and address proof');
+        Notification::fake();
+        $this->post('/email/verification-notification')->assertRedirect();
+        Notification::assertSentTo($client, VerifyEmail::class);
+        $this->get(URL::temporarySignedRoute('verification.verify', now()->addMinutes(30), ['id' => $client->id, 'hash' => sha1($client->email)]))->assertRedirect('/onboarding');
+        $this->post('/onboarding/'.$client->id.'/details', ['name' => 'Sophia Bennett', 'phone' => '12345', 'address' => 'Test address'])->assertRedirect();
+        $this->post('/onboarding/'.$client->id.'/submit')->assertStatus(422);
+        foreach (['identity', 'address'] as $purpose) {
+            $this->post('/onboarding/'.$client->id.'/documents', ['purpose' => $purpose, 'label' => $purpose === 'identity' ? 'Passport' : 'Utility bill', 'file' => UploadedFile::fake()->create($purpose.'.pdf', 10, 'application/pdf')])->assertRedirect();
+        }
+        $this->post('/onboarding/'.$client->id.'/submit')->assertRedirect();
+        $this->get('/deals')->assertRedirect('/onboarding');
+        $this->post('/onboarding/'.$client->id.'/details', ['name' => 'Changed', 'phone' => '123', 'address' => 'Changed'])->assertStatus(409);
+        $this->actingAs($this->actor('manager'))->post('/onboarding/'.$client->id.'/review', ['decision' => 'approved'])->assertForbidden();
+        $this->actingAs($this->actor('admin'))->post('/onboarding/'.$client->id.'/review', ['decision' => 'returned'])->assertSessionHasErrors('reason');
+        $this->post('/onboarding/'.$client->id.'/review', ['decision' => 'approved'])->assertRedirect();
+        $this->actingAs($client->fresh())->get('/deals')->assertOk();
+        $document = PortalEntry::where('client_id', $client->id)->whereHas('documentVersion', fn ($q) => $q->where('onboarding_purpose', 'identity'))->first();
+        $this->assertSame('staff', $document->data['visibility']);
+        $this->get('/documents/'.$document->id.'/download')->assertNotFound();
     }
 
-    public function test_failed_form_preserves_values_and_private_pages_are_not_cached(): void
+    public function test_private_downloads_and_assignment_isolation(): void
     {
-        $this->actingAs($this->actor('manager'))->from('/holdings')->post('/holdings', ['_form' => 'holding-modal', 'name' => 'A holding in progress', 'client_id' => $this->actor('client')->id])->assertRedirect('/holdings')->assertSessionHasErrors('type')->assertSessionHasInput('name', 'A holding in progress');
-        $this->get('/holdings')->assertOk()->assertSee('holding-modal')->assertSee('A holding in progress')->assertHeader('X-Frame-Options', 'DENY')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $other = Holding::where('client_id', $this->actor('other')->id)->first();
+        foreach (['client', 'manager'] as $role) {
+            $this->actingAs($this->actor($role))->get('/holding/'.$other->id)->assertNotFound();
+            $this->get('/client/'.$this->actor('other')->id)->assertStatus($role === 'client' ? 403 : 404);
+        }
+        $kyc = PortalEntry::where('kind', 'document')->whereField('category', 'KYC')->first();
+        $this->actingAs($this->actor('client'))->get('/documents/'.$kyc->id.'/download')->assertNotFound();
+        $this->actingAs($this->actor('manager'))->get('/documents/'.$kyc->id.'/download')->assertOk();
         $this->assertStringContainsString('no-store', $this->get('/dashboard')->headers->get('Cache-Control'));
     }
 
-    public function test_document_validation_rejects_executable_and_oversized_uploads(): void
+    public function test_only_admin_creates_holdings_and_confirmed_details_are_locked(): void
     {
-        $payload = ['client_id' => $this->actor('client')->id, 'title' => 'Invalid upload', 'category' => 'Storage', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('payload.php', 20, 'text/x-php')];
-        $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertSessionHasErrors('file');
-        $payload['file'] = UploadedFile::fake()->create('large.pdf', 10241, 'application/pdf');
-        $this->post('/documents', $payload)->assertSessionHasErrors('file');
+        $payload = ['client_id' => $this->actor('client')->id, 'type' => 'wine', 'name' => 'New wine', 'reference' => 'NEW', 'producer' => 'Test', 'quantity' => 12, 'storage' => 'Test', 'acquired' => now()->toDateString(), 'bottle_ml' => 750];
+        $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertForbidden();
+        $this->actingAs($this->actor('client'))->post('/holdings', $payload)->assertForbidden();
+        $this->actingAs($this->actor('admin'))->post('/holdings', $payload)->assertRedirect();
+        $new = Holding::where('reference', 'NEW')->firstOrFail();
+        $this->assertNull($new->released_at);
+        $this->actingAs($this->actor('client'))->get('/holding/'.$new->id)->assertNotFound();
+        $this->actingAs($this->actor('manager'))->post('/onboarding/'.$this->actor('client')->id.'/details', ['name' => 'Changed', 'phone' => '1', 'address' => 'A'])->assertStatus(409);
+        $this->post('/clients/'.$this->actor('client')->id.'/profile', ['name' => 'Changed', 'notes' => 'Reason'])->assertStatus(410);
     }
 
-    public function test_login_requires_credentials_and_logout_ends_session(): void
+    public function test_package_review_return_resolve_restore_and_private_files(): void
     {
-        $this->get('/dashboard')->assertRedirect('/login');
-        $this->post('/login', ['email' => 'client@fineworth.test', 'password' => 'wrong'])->assertSessionHasErrors('email');
-        $this->post('/login', ['email' => 'client@fineworth.test', 'password' => 'FineworthDemo!27'])->assertRedirect('/dashboard');
-        $this->assertAuthenticatedAs($this->actor('client'));
-        $this->post('/logout')->assertRedirect('/login');
-        $this->assertGuest();
+        $holding = Holding::where('reference', 'FW-C4188')->first();
+        $this->actingAs($this->actor('client'))->post('/requests', ['holding_id' => $holding->id, 'type' => 'Regauge', 'notes' => 'Please regauge'])->assertRedirect();
+        $entry = PortalEntry::where('kind', 'request')->latest('id')->first();
+        $this->post('/requests/'.$entry->id, ['status' => 'in progress'])->assertForbidden();
+        $this->actingAs($this->actor('manager'))->post('/requests/'.$entry->id, ['status' => 'completed'])->assertSessionHasErrors('status');
+        $this->post('/requests/'.$entry->id, ['status' => 'in progress'])->assertRedirect();
+        $payload = ['request_id' => $entry->id, 'title' => 'New regauge', 'notes' => 'New measured report', 'litres' => '190.5', 'files' => [UploadedFile::fake()->create('report.pdf', 10, 'application/pdf')]];
+        $this->post('/holdings/'.$holding->id.'/updates', $payload)->assertRedirect();
+        $update = DB::table('holding_updates')->where('request_id', $entry->id)->first();
+        $file = DB::table('holding_update_files')->where('update_id', $update->id)->first();
+        $this->assertSame('pending review', $entry->fresh()->status);
+        $original = Holding::find($holding->id)->whisky->litres;
+        $this->assertEquals(197.3, $original);
+        $this->actingAs($this->actor('client'))->get('/requests/'.$entry->id)->assertOk()->assertDontSee('New measured report');
+        $this->get('/update-files/'.$file->id)->assertNotFound();
+        $this->actingAs($this->actor('admin'))->post('/updates/'.$update->id.'/review', ['decision' => 'returned'])->assertSessionHasErrors('reason');
+        $this->post('/updates/'.$update->id.'/review', ['decision' => 'returned', 'reason' => 'Wrong report'])->assertRedirect();
+        $this->assertSame('in progress', $entry->fresh()->status);
+        $this->actingAs($this->actor('client'))->get('/requests/'.$entry->id)->assertOk()->assertDontSee('Wrong report');
+        $this->actingAs($this->actor('manager'))->post('/holdings/'.$holding->id.'/updates', array_replace($payload, ['notes' => 'Correct report', 'files' => [UploadedFile::fake()->create('correct.pdf', 10, 'application/pdf')]]))->assertRedirect();
+        $correct = DB::table('holding_updates')->where('request_id', $entry->id)->latest('id')->first();
+        $this->actingAs($this->actor('admin'))->post('/updates/'.$correct->id.'/review', ['decision' => 'approved'])->assertRedirect();
+        $this->assertSame('resolved', $entry->fresh()->status);
+        $this->assertEquals(190.5, Holding::find($holding->id)->whisky->litres);
+        $this->post('/updates/'.$correct->id.'/review', ['decision' => 'approved'])->assertStatus(409);
+        $baseline = DB::table('holding_updates')->where('holding_id', $holding->id)->whereNull('request_id')->first();
+        $this->post('/updates/'.$baseline->id.'/restore', ['reason' => 'Revert to earlier measurement'])->assertRedirect();
+        $this->assertEquals($original, Holding::find($holding->id)->whisky->litres);
+        $this->assertSame('resolved', $entry->fresh()->status);
+        $this->assertDatabaseCount('holding_updates', 3);
+        $this->assertDatabaseCount('holding_publications', 2);
+        $this->actingAs($this->actor('client'))->get('/holding/'.$holding->id)->assertOk()->assertSee('Correct report')->assertDontSee('Wrong report');
     }
 
-    public function test_clients_and_managers_cannot_access_other_clients(): void
+    public function test_cross_holding_packages_upload_validation_and_direct_admin_updates(): void
     {
-        $otherHolding = PortalEntry::where('client_id', $this->actor('other')->id)->where('kind', 'holding')->first();
-        foreach (['client', 'manager'] as $role) {
-            $this->actingAs($this->actor($role));
-            $this->get('/holding/'.$otherHolding->id)->assertNotFound();
-            $this->get('/dashboard')->assertDontSee('Highland Park 2018')->assertDontSee('James Whitmore');
-            $this->get('/approvals')->assertForbidden();
-            $this->post('/accounts', ['name' => 'Attacker'])->assertForbidden();
-        }
-        $this->actingAs($this->actor('manager'))->get('/client/'.$this->actor('other')->id)->assertNotFound();
+        $holding = Holding::where('reference', 'FW-C4188')->first();
+        $other = Holding::where('client_id', $this->actor('other')->id)->first();
+        $payload = ['title' => 'Direct update', 'notes' => 'New photos', 'files' => [UploadedFile::fake()->create('image.php', 2, 'text/x-php')]];
+        $this->actingAs($this->actor('admin'))->post('/holdings/'.$holding->id.'/updates', $payload)->assertSessionHasErrors('files.0');
+        $payload['files'] = [UploadedFile::fake()->image('photo.png')];
+        $this->actingAs($this->actor('manager'))->post('/holdings/'.$other->id.'/updates', $payload)->assertNotFound();
+        $this->post('/holdings/'.$holding->id.'/updates', $payload)->assertForbidden();
+        $service = PortalEntry::where('kind', 'request')->firstOrFail();
+        $this->post('/holdings/'.$holding->id.'/updates', $payload + ['request_id' => $service->id])->assertStatus(409);
+        $before = PortalEntry::where('kind', 'request')->count();
+        $this->actingAs($this->actor('admin'))->post('/holdings/'.$holding->id.'/updates', $payload)->assertRedirect();
+        $update = DB::table('holding_updates')->where('status', 'pending review')->first();
+        $this->post('/updates/'.$update->id.'/review', ['decision' => 'approved'])->assertRedirect();
+        $this->assertSame($before, PortalEntry::where('kind', 'request')->count());
+        $image = DB::table('holding_update_files')->where('update_id', $update->id)->first();
+        $this->actingAs($this->actor('client'))->get('/update-files/'.$image->id.'?view=1')->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->assertDatabaseHas('portal_notifications', ['user_id' => $this->actor('client')->id, 'message' => 'A holding update has been published.']);
     }
 
-    public function test_private_documents_are_hidden_and_downloads_authorized(): void
+    public function test_wine_cannot_be_regauged_and_notifications_are_private(): void
     {
-        $pending = PortalEntry::where('kind', 'document')->whereField('status', 'pending')->first();
-        $kyc = PortalEntry::where('kind', 'document')->whereField('category', 'KYC')->first();
-        $approved = PortalEntry::where('kind', 'document')->whereField('category', 'Ownership')->first();
-        $this->actingAs($this->actor('client'))->get('/documents')->assertDontSee('Annual regauge report')->assertDontSee('Identity verification record');
-        foreach ([$pending, $kyc] as $doc) {
-            $this->get('/documents/'.$doc->id.'/download')->assertNotFound();
-        }
-        $this->get('/documents/'.$approved->id.'/download')->assertOk()->assertDownload();
-        $this->actingAs($this->actor('other'))->get('/documents/'.$approved->id.'/download')->assertNotFound();
-    }
-
-    public function test_document_upload_approval_replacement_and_immutable_history(): void
-    {
-        $client = $this->actor('client');
-        $payload = ['client_id' => $client->id, 'holding_id' => Holding::where('reference', 'FW-C4188')->value('id'), 'title' => 'Fresh report', 'category' => 'Regauge', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'notes' => 'Measured at the warehouse.', 'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf')];
-        $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertRedirect()->assertSessionHasNoErrors();
-        $doc = PortalEntry::latest('id')->first();
-        $this->assertSame('pending', $doc->data['status']);
-        Storage::disk('local')->assertExists($doc->data['path']);
-        $this->actingAs($client)->get('/documents/'.$doc->id.'/download')->assertNotFound();
-        $this->actingAs($this->actor('manager'))->post('/approvals/'.$doc->id, ['decision' => 'approved'])->assertForbidden();
-        $this->actingAs($this->actor('admin'))->post('/approvals/'.$doc->id, ['decision' => 'approved'])->assertRedirect();
-        $this->actingAs($client)->get('/documents')->assertSee('Fresh report');
-        $this->get('/documents/'.$doc->id.'/download')->assertOk();
-        $payload['replaces_id'] = $doc->id;
-        $payload['title'] = 'Updated report';
-        $payload['file'] = UploadedFile::fake()->create('updated.pdf', 20, 'application/pdf');
-        $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertSessionHasNoErrors();
-        $next = PortalEntry::latest('id')->first();
-        $this->assertSame($doc->data['series'], $next->data['series']);
-        $this->actingAs($this->actor('admin'))->post('/approvals/'.$next->id, ['decision' => 'approved'])->assertRedirect();
-        $this->post('/approvals/'.$doc->id, ['decision' => 'rejected', 'reason' => 'Cannot undo approval'])->assertStatus(409);
-        $this->actingAs($client)->get('/documents')->assertSee('Fresh report')->assertSee('Updated report');
-    }
-
-    public function test_upload_cannot_cross_link_clients_or_holdings(): void
-    {
-        $payload = ['client_id' => $this->actor('other')->id, 'title' => 'Wrong owner', 'category' => 'Ownership', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf')];
-        $this->actingAs($this->actor('manager'))->post('/documents', $payload)->assertNotFound();
-        $payload['client_id'] = $this->actor('client')->id;
-        $payload['holding_id'] = Holding::where('reference', 'FW-C7011')->value('id');
-        $this->actingAs($this->actor('admin'))->post('/documents', $payload)->assertUnprocessable();
-    }
-
-    public function test_kyc_is_staff_only_even_when_client_visibility_requested(): void
-    {
-        $this->actingAs($this->actor('manager'))->post('/documents', ['client_id' => $this->actor('client')->id, 'title' => 'Secure identity', 'category' => 'KYC', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('identity.pdf', 20, 'application/pdf')])->assertSessionHasNoErrors();
-        $doc = PortalEntry::latest('id')->first();
-        $this->assertSame('staff', $doc->data['visibility']);
-        $this->actingAs($this->actor('admin'))->post('/approvals/'.$doc->id, ['decision' => 'approved']);
-        $this->actingAs($this->actor('client'))->get('/documents/'.$doc->id.'/download')->assertNotFound();
-    }
-
-    public function test_request_flow_and_asset_service_validation(): void
-    {
-        $this->actingAs($this->actor('client'))->post('/requests', ['holding_id' => Holding::where('reference', 'FW-C4188')->value('id'), 'type' => 'Regauge', 'notes' => 'Please measure the cask.'])->assertSessionHasNoErrors();
-        $request = PortalEntry::latest('id')->first();
-        $this->post('/requests/'.$request->id, ['status' => 'completed'])->assertForbidden();
-        $this->actingAs($this->actor('manager'))->post('/requests/'.$request->id, ['status' => 'completed', 'staff_note' => 'Report received.'])->assertSessionHasNoErrors();
-        $this->actingAs($this->actor('client'))->get('/requests')->assertSee('Report received.')->assertSee('completed');
-        $this->post('/requests', ['holding_id' => Holding::where('reference', 'FW-W1024')->value('id'), 'type' => 'Regauge', 'notes' => 'Wine cannot be regauged.'])->assertUnprocessable();
-        $this->post('/requests', ['holding_id' => Holding::where('reference', 'FW-C7011')->value('id'), 'type' => 'Evaluation', 'notes' => 'Not my holding.'])->assertNotFound();
-    }
-
-    public function test_admin_creates_accounts_and_assignment_controls_manager_access(): void
-    {
-        $manager = $this->actor('manager');
-        $other = $this->actor('other');
-        $this->actingAs($this->actor('admin'))->post('/accounts', ['name' => 'New Client', 'email' => 'new@fineworth.test', 'password' => 'A-strong-password!', 'role' => 'client', 'manager_ids' => [$manager->id]])->assertSessionHasNoErrors();
-        $new = User::where('email', 'new@fineworth.test')->firstOrFail();
-        $this->assertSame([$manager->id], $new->manager_ids);
-        $this->post('/clients/'.$other->id.'/assign', ['manager_ids' => [$manager->id]])->assertSessionHasNoErrors();
-        $this->actingAs($manager)->get('/client/'.$other->id)->assertOk();
-        $this->actingAs($this->actor('admin'))->post('/clients/'.$other->id.'/assign', []);
-        $this->actingAs($manager)->get('/client/'.$other->id)->assertNotFound();
-    }
-
-    public function test_profile_change_requires_approval_and_rejection_note(): void
-    {
-        $client = $this->actor('client');
-        $this->actingAs($this->actor('manager'))->post('/clients/'.$client->id.'/profile', ['name' => 'Sophia Changed', 'notes' => 'Correct display name.'])->assertSessionHasNoErrors();
-        $change = PortalEntry::latest('id')->first();
-        $this->assertSame('Sophia Bennett', $client->fresh()->name);
-        $this->actingAs($this->actor('admin'))->post('/approvals/'.$change->id, ['decision' => 'rejected'])->assertSessionHasErrors('reason');
-        $this->post('/approvals/'.$change->id, ['decision' => 'approved'])->assertSessionHasNoErrors();
-        $this->assertSame('Sophia Changed', $client->fresh()->name);
-    }
-
-    public function test_client_onboarding_is_private_with_own_submission_status(): void
-    {
-        $client = $this->actor('client');
-        $this->actingAs($client)->post('/documents', ['client_id' => $client->id, 'title' => 'My onboarding file', 'category' => 'Ownership', 'visibility' => 'client', 'document_date' => now()->toDateString(), 'file' => UploadedFile::fake()->create('onboarding.pdf', 20, 'application/pdf')])->assertSessionHasNoErrors();
-        $doc = PortalEntry::latest('id')->first();
-        $this->assertSame('staff', $doc->data['visibility']);
-        $this->assertSame('Onboarding', $doc->data['category']);
-        $this->get('/documents')->assertSee('My onboarding file')->assertSee('Pending');
-        $this->get('/documents/'.$doc->id.'/download')->assertNotFound();
-    }
-
-    public function test_staff_can_create_whisky_and_wine_metadata_without_prices(): void
-    {
-        $payload = ['client_id' => $this->actor('client')->id, 'type' => 'wine', 'name' => 'Test wine', 'reference' => 'W-TEST', 'producer' => 'Test producer', 'quantity' => 24, 'storage' => 'Test warehouse', 'acquired' => '2026-01-01', 'vintage' => 2018, 'bottle_ml' => 750, 'bottles_per_case' => 6, 'format' => '75 cl'];
-        $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasNoErrors();
-        $holding = PortalEntry::latest('id')->first();
-        $this->assertSame(24, $holding->data['quantity']);
-        $this->actingAs($this->actor('client'))->get('/holding/'.$holding->id)->assertSee('Test wine')->assertDontSee('Purchase price')->assertDontSee('Indicative price');
-        $this->post('/holdings', $payload)->assertForbidden();
-    }
-
-    public function test_measurements_are_validated_by_type_and_scoped_for_all_roles(): void
-    {
-        $payload = ['client_id' => $this->actor('client')->id, 'type' => 'wine', 'name' => 'Magnum collection', 'reference' => 'W-MAG', 'producer' => 'Producer', 'quantity' => 3, 'storage' => 'Bond', 'acquired' => '2026-01-01'];
-        $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasErrors('bottle_ml');
-        $this->post('/holdings', $payload + ['bottle_ml' => -1])->assertSessionHasErrors('bottle_ml');
-        $this->post('/holdings', $payload + ['bottle_ml' => 1500, 'litres' => 999, 'abv' => 50])->assertSessionHasNoErrors();
-        $wine = PortalEntry::latest('id')->first();
-        $this->assertArrayNotHasKey('litres', $wine->data);
-        $this->assertArrayNotHasKey('abv', $wine->data);
-        foreach (['admin', 'manager', 'client'] as $role) {
-            $this->actingAs($this->actor($role))->get('/holding/'.$wine->id)->assertOk()->assertSee('3 bottles')->assertSee('1,500 mL / bottle')->assertSee('4.5 L wine');
-            if ($role === 'client') {
-                $this->get('/dashboard')->assertSee('69 bottles')->assertSee('54 L recorded')->assertSee('2 casks');
-            } else {
-                $this->get('/holdings')->assertSee('69 bottles')->assertSee($role === 'admin' ? '3 casks' : '2 casks');
-                $this->get('/dashboard')->assertSee('items need attention');
-            }
-        }
-        $payload['type'] = 'whisky';
-        $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertSessionHasErrors('quantity');
-        $payload['quantity'] = 1;
-        $payload['litres'] = 200.25;
-        $payload['abv'] = 62.5;
-        $this->post('/holdings', $payload + ['bottle_ml' => 750, 'vintage' => 2020])->assertSessionHasNoErrors();
-        $cask = PortalEntry::latest('id')->first();
-        $this->assertArrayNotHasKey('bottle_ml', $cask->data);
-        $this->assertArrayNotHasKey('vintage', $cask->data);
-        $this->actingAs($this->actor('client'))->get('/holding/'.$cask->id)->assertSee('1 cask')->assertSee('200.25 L recorded bulk')->assertSee('62.5% ABV');
-        $payload['client_id'] = $this->actor('other')->id;
-        $this->actingAs($this->actor('manager'))->post('/holdings', $payload)->assertNotFound();
-    }
-
-    public function test_unknown_measurements_are_not_reported_as_zero_or_complete_totals(): void
-    {
-        $known = new PortalEntry(['data' => ['type' => 'wine', 'quantity' => 12, 'format' => '75 cl · 6-bottle cases']]);
-        $unknown = new PortalEntry(['data' => ['type' => 'wine', 'quantity' => 6, 'format' => 'Wooden case']]);
-        $zero = new PortalEntry(['data' => ['type' => 'whisky', 'quantity' => 1, 'litres' => 0]]);
-        $this->assertSame('9 L wine', HoldingMeasurements::volume($known->data));
-        $this->assertSame('Volume not recorded', HoldingMeasurements::volume($unknown->data));
-        $this->assertSame('0 L recorded bulk', HoldingMeasurements::volume($zero->data));
-        $this->assertSame('9 L recorded · 1 holding(s) missing volume', HoldingMeasurements::totalVolume(collect([$known, $unknown])));
+        $wine = Holding::where('client_id', $this->actor('client')->id)->where('type', 'wine')->first();
+        $this->actingAs($this->actor('client'))->post('/requests', ['holding_id' => $wine->id, 'type' => 'Regauge', 'notes' => 'Wrong type'])->assertStatus(422);
+        $id = DB::table('portal_notifications')->insertGetId(['user_id' => $this->actor('other')->id, 'message' => 'OTHER-CLIENT-ALERT', 'url' => '/holdings', 'created_at' => now()]);
+        $this->get('/notifications')->assertDontSee('OTHER-CLIENT-ALERT');
+        $this->post('/notifications/'.$id.'/read')->assertNotFound();
     }
 }

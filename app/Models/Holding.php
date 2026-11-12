@@ -26,4 +26,16 @@ class Holding extends Model
     {
         return $this->hasOne(WineHolding::class);
     }
+
+    public function agreement()
+    {
+        return $this->belongsTo(Deal::class, 'agreement_id');
+    }
+
+    public function scopeReleased($query)
+    {
+        return $query->whereNotNull('released_at')->whereHas('agreement', fn ($agreement) => $agreement
+            ->whereNotNull('signed_document_id')->whereHas('signingRequests', fn ($signing) => $signing
+            ->where('status', 'completed')->whereColumn('signing_requests.document_version_id', 'deals.document_id')));
+    }
 }

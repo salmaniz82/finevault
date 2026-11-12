@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 class SigningDemoTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Support\WorkflowFixtures;
 
     private const ENVELOPE = 'a0000000-0000-0000-0000-000000000001';
 
@@ -24,6 +24,9 @@ class SigningDemoTest extends TestCase
         Http::preventStrayRequests();
         Storage::fake('local');
         $this->seed(PrototypeSeeder::class);
+        foreach (User::where('role', 'client')->get() as $client) {
+            $this->approveClient($client);
+        }
         config(['docusign.integration_key' => 'test-key', 'docusign.user_id' => 'test-user', 'docusign.account_id' => 'test-account']);
         Cache::put('docusign-demo-token-'.hash('sha256', 'test-keytest-user'), 'fake-token', 3000);
         // A file is required for readiness; HTTP calls use the cached fake token.
@@ -191,11 +194,11 @@ class SigningDemoTest extends TestCase
     {
         $client = $this->actor('client');
         $doc = PortalEntry::create(['client_id' => $client->id, 'kind' => 'document', 'data' => ['title' => 'Welcome and next steps', 'category' => 'Onboarding', 'status' => 'approved', 'visibility' => 'client', 'document_date' => '2026-10-29']]);
-        $this->actingAs($client)->get('/dashboard')->assertOk()->assertSee('Welcome and next steps')->assertSee('Record review');
+        $this->actingAs($client)->get('/dashboard')->assertRedirect('/deals');
         $this->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertSessionHasNoErrors();
         $this->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertSessionHasNoErrors();
         $this->assertSame(1, PortalEntry::where('kind', 'onboarding_ack')->count());
-        $this->get('/dashboard')->assertSee('Review recorded');
+        $this->assertDatabaseCount('document_acknowledgements', 1);
         $this->actingAs($this->actor('james'))->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertNotFound();
         $this->actingAs($this->actor('manager'))->post('/onboarding/'.$doc->id.'/acknowledge', ['acknowledged' => 1])->assertForbidden();
         $doc = PortalEntry::create(['client_id' => $client->id, 'kind' => 'document', 'data' => ['title' => 'Private onboarding submission', 'category' => 'Onboarding', 'status' => 'approved', 'visibility' => 'staff', 'document_date' => '2026-10-29']]);

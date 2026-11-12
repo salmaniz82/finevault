@@ -6,6 +6,7 @@ use App\Models\PortalEntry;
 use App\Services\DealAgreement;
 use App\Services\DocusignDemo;
 use App\Services\Portal;
+use App\Services\Workflow;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,8 @@ class DealSigningController extends Controller
     {
         abort_unless($request->user()->role === 'client', 403);
         $deal = $this->portal->record($request->user(), $id, 'deal');
-        abort_unless(in_array($deal->data['template_version'] ?? '', ['demo-2026-11-03-v2', DealAgreement::TEMPLATE_VERSION]), 409, 'Create a new agreement using the signing-ready template.');
+        abort_if(($deal->data['signing_status'] ?? '') === 'completed' || ! empty($deal->data['signed_document_id']), 409, 'This agreement is already signed and locked.');
+        abort_unless(in_array($deal->data['template_version'] ?? '', ['demo-2026-11-03-v2', 'demo-2026-11-04-v3', DealAgreement::TEMPLATE_VERSION]), 409, 'Create a new agreement using the signing-ready template.');
         $request->validate(['sandbox_ack' => 'accepted']);
         $document = $this->portal->record($request->user(), $deal->data['document_id'], 'document');
         abort_unless(($document->data['status'] ?? '') === 'approved', 409);
@@ -57,6 +59,9 @@ class DealSigningController extends Controller
             abort_unless(is_string($state) && is_string($request->query('state')) && hash_equals($state, $request->query('state')), 403);
         }
         abort_unless($envelope = $deal->data['envelope_id'] ?? null, 404);
+        if (! empty($deal->data['signed_document_id'])) {
+            return redirect('/deals/'.$id)->with('success', 'Agreement is already signed and locked.');
+        }
         $path = null;
         try {
             // Browser return events never establish completion.
@@ -74,18 +79,20 @@ class DealSigningController extends Controller
                     abort_unless(Storage::disk('local')->put($path, $pdf), 500);
                     $signed = PortalEntry::create(['client_id' => $deal->client_id, 'kind' => 'document', 'data' => [
                         'title' => 'Signed deal FW-'.$id.' — '.$data['name'], 'category' => 'Agreement',
-                        'status' => 'pending', 'visibility' => 'client', 'document_date' => now()->toDateString(),
+                        'status' => 'approved', 'visibility' => 'client', 'document_date' => now()->toDateString(),
                         'path' => $path, 'original_name' => 'fineworth-deal-'.$id.'-signed.pdf',
                         'series' => $original->data['series'], 'replaces_id' => $original->id,
                         'uploaded_by' => 'Verified DocuSign sandbox', 'uploaded_by_id' => null,
-                        'notes' => 'Completion verified server-side. Signed copy awaits admin publication; original approved version is retained.',
+                        'notes' => 'Signature verified server-side. Signed copy is locked; original approved version is retained.',
                     ]]);
                     $data['signed_document_id'] = $signed->id;
+                    Workflow::audit('agreement.signed', $id);
+                    Workflow::notify(Workflow::admins(), 'A client signed their agreement. Review linked holdings for release.', '/deals/'.$id);
                 }
                 $deal->update(['data' => $data]);
             });
 
-            return redirect('/deals/'.$id)->with('success', $status === 'completed' ? 'Sandbox signature verified. The signed copy is queued for admin approval.' : 'Sandbox signing status: '.$status.'.');
+            return redirect('/deals/'.$id)->with('success', $status === 'completed' ? 'Signature verified. Agreement is signed and locked.' : 'Sandbox signing status: '.$status.'.');
         } catch (\Throwable $e) {
             if ($path) {
                 Storage::disk('local')->delete($path);

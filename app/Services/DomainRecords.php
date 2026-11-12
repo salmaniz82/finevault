@@ -34,7 +34,7 @@ class DomainRecords
 
     public const WINE = ['vintage', 'format', 'bottle_ml', 'bottles_per_case'];
 
-    public const VERSION = ['title', 'document_date', 'path', 'original_name', 'holding_id', 'deal_id', 'replaces_id', 'uploaded_by', 'uploaded_by_id', 'notes', 'signing_hotspots', 'sha256'];
+    public const VERSION = ['title', 'document_date', 'path', 'original_name', 'holding_id', 'deal_id', 'replaces_id', 'uploaded_by', 'uploaded_by_id', 'notes', 'signing_hotspots', 'sha256', 'onboarding_purpose'];
 
     public const REVIEW = ['reviewed_by', 'reviewed_by_id', 'reviewed_at', 'review_note'];
 
@@ -94,7 +94,7 @@ class DomainRecords
 
     private function dealData(Deal $deal): array
     {
-        $item = $deal->items->sole(); // Existing journey supports one item; no new multi-item workflow implied.
+        $item = $deal->items->firstOrFail();
         $deposit = $deal->deposits->sole();
         $data = $this->fields($deal, self::DEAL) + $this->fields($item, self::ITEM);
         $data += ['unit_price' => number_format($item->unit_price_minor / 100, 2, '.', ''),
@@ -108,6 +108,8 @@ class DomainRecords
             $totals[$type] = $fee->amount_minor;
         }
         $data['totals'] = $totals + ['total' => $deal->total_minor, 'deposit' => $deposit->amount_minor, 'balance' => $deal->balance_minor];
+        $data['items'] = $deal->items->map(fn ($row) => $this->fields($row, self::ITEM) + ['unit_price' => number_format($row->unit_price_minor / 100, 2, '.', '')])->all();
+        $data['terms'] = $deal->agreement_snapshot['terms'] ?? '';
         if ($signing = $deal->signingRequests->firstWhere('document_version_id', $deal->document_id)) {
             $data += ['envelope_id' => $signing->envelope_id, 'signing_status' => $signing->status];
         }
@@ -125,7 +127,7 @@ class DomainRecords
         $allowed = match ($kind) {
             'holding' => [...self::HOLDING, ...self::WHISKY, ...self::WINE],
             'document' => [...self::VERSION, ...self::REVIEW, 'series', 'category', 'visibility'],
-            'deal' => [...self::DEAL, ...self::ITEM, 'unit_price', 'deposit', 'deposit_reference', 'deposit_date', 'markup_rate', 'management_rate', 'brokerage_rate', 'totals', 'created_at', 'envelope_id', 'signing_status'],
+            'deal' => [...self::DEAL, ...self::ITEM, 'items', 'terms', 'unit_price', 'deposit', 'deposit_reference', 'deposit_date', 'markup_rate', 'management_rate', 'brokerage_rate', 'totals', 'created_at', 'envelope_id', 'signing_status'],
             'request' => [...self::REQUEST, 'history'],
             'profile' => self::PROFILE,
             'onboarding_ack' => ['document_id', 'acknowledged_at'],
@@ -139,7 +141,7 @@ class DomainRecords
         $statuses = match ($kind) {
             'holding' => ['In storage'], 'document', 'profile' => ['pending', 'approved', 'rejected'],
             'deal' => ['draft', 'pending', 'published', 'reviewed', 'rejected'],
-            'request' => ['submitted', 'in progress', 'completed'],
+            'request' => ['submitted', 'in progress', 'completed', 'pending', 'pending review', 'resolved'],
             'direct_signature_demo' => ['completed'], default => [null],
         };
         if (! in_array($data['status'] ?? null, $statuses, true)) {
@@ -240,14 +242,16 @@ class DomainRecords
                 'stock_minor' => $totals['stock'], 'total_minor' => $totals['total'], 'balance_minor' => $totals['balance'],
                 'agreement_snapshot' => Arr::except($data, ['status', 'document_id', 'signed_document_id', 'envelope_id', 'signing_status', 'review_note', 'acknowledged_at']),
             ] + $this->dates(Arr::only($data, self::DEAL)));
-            DealItem::create(['deal_id' => $entry->id, 'position' => 1, 'unit_price_minor' => DealAgreement::pennies($data['unit_price'])] + Arr::only($data, self::ITEM));
+            foreach ($data['items'] ?? [$data] as $position => $item) {
+                DealItem::create(['deal_id' => $entry->id, 'position' => $position + 1, 'unit_price_minor' => DealAgreement::pennies($item['unit_price'])] + Arr::only($item, self::ITEM));
+            }
             foreach (['markup', 'management', 'brokerage'] as $type) {
                 DealFee::create(['deal_id' => $entry->id, 'type' => $type, 'rate' => $data[$type.'_rate'], 'amount_minor' => $totals[$type]]);
             }
             ExternalDeposit::create(['deal_id' => $entry->id, 'position' => 1, 'amount_minor' => $totals['deposit'], 'reference' => $data['deposit_reference'], 'recorded_date' => $data['deposit_date']]);
         } else {
             $before = $this->dealData($existing);
-            foreach ([...self::ITEM, 'client_name', 'client_email', 'client_address', 'balance_due', 'unit_price', 'deposit', 'deposit_reference', 'deposit_date', 'markup_rate', 'management_rate', 'brokerage_rate', 'totals'] as $field) {
+            foreach ([...self::ITEM, 'client_name', 'client_email', 'client_address', 'balance_due', 'unit_price', 'deposit', 'deposit_reference', 'deposit_date', 'markup_rate', 'management_rate', 'brokerage_rate', 'totals', 'items', 'terms'] as $field) {
                 if (($before[$field] ?? null) != ($data[$field] ?? null)) {
                     throw new InvalidArgumentException('Deal commercial data is frozen; create a corrected draft.');
                 }
@@ -271,7 +275,7 @@ class DomainRecords
     {
         foreach (['reviewed_at', 'acknowledged_at', 'signed_at', 'at'] as $field) {
             if (! empty($values[$field])) {
-                $values[$field] = Carbon::parse($values[$field])->utc()->format('Y-m-d H:i:s');
+                $values[$field] = Carbon::parse($values[$field], 'UTC')->utc()->format('Y-m-d H:i:s');
             }
         }
 

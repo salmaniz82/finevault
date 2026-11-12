@@ -1,5 +1,5 @@
-# Fineworth Portal — Laravel 13 prototype
+# Fineworth Portal — Laravel 13 application
 
-See [current prototype guide](../docs/PROTOTYPE_BUILD.md) for setup, sample credentials, walkthrough and implementation boundaries.
+Read the project [AGENTS.md](../AGENTS.md) for requirements, design, architecture and open decisions. Detailed historical guides are preserved in `../references/docs-archive-2026-11-11/`; consult them only when needed.
 
-Run `php artisan test --compact` to verify role access and document workflows. Start the local application with `.\start.ps1`.
+Run `php artisan test --compact` to verify role access and document workflows. Start the local application with `.\start.ps1`. Do not reset the working database.

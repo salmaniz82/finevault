@@ -5,20 +5,23 @@
 <div class="banner">FICTIONAL DEMONSTRATION ONLY · FW-{{ $id }} · Template {{ $data['template_version'] }}<br>Sample commercial terms for workflow review. Not an approved contract or proof of ownership.</div>
 <h2>01 / Client and stock</h2>
 <table><tr><td>Client</td><td>{{ $data['client_name'] }}<br>{{ $data['client_email'] }}</td></tr><tr><td>Address</td><td>{{ $data['client_address'] }}</td></tr>
-@foreach(['name'=>'Stock name','reference'=>'Stock / cask reference','producer'=>'Distillery / producer','storage'=>'Storage location'] as $key=>$label)<tr><td>{{ $label }}</td><td>{{ $data[$key] }}</td></tr>@endforeach
-<tr><td>Asset and quantity</td><td>{{ ucfirst($data['type']) }} · {{ $data['quantity'] }} {{ $data['type'] === 'whisky' ? 'cask' : 'bottles' }}</td></tr>
-@if($data['type'] === 'whisky')
-@foreach(['cask_type'=>'Cask type','cask_size'=>'Nominal cask capacity (L)','ola'=>'Original litres of alcohol (OLA, L)','rla'=>'Regauged litres of alcohol (RLA, L)','abv'=>'Recorded ABV (%)','measurement_date'=>'Measurement date'] as $key=>$label)<tr><td>{{ $label }}</td><td>{{ $data[$key] }}</td></tr>@endforeach
-@else<tr><td>Vintage / bottle size</td><td>{{ $data['vintage'] }} / {{ $data['bottle_ml'] }} mL</td></tr><tr><td>Total wine volume</td><td>{{ number_format($data['quantity']*$data['bottle_ml']/1000,2) }} L</td></tr>@endif</table>
+@foreach($data['items'] ?? [$data] as $item)
+@foreach(['name'=>'Stock name','reference'=>'Stock / cask reference','producer'=>'Distillery / producer','storage'=>'Storage location'] as $key=>$label)<tr><td>{{ $label }}</td><td>{{ $item[$key] }}</td></tr>@endforeach
+<tr><td>Asset and quantity</td><td>{{ ucfirst($item['type']) }} · {{ $item['quantity'] }} {{ $item['type'] === 'whisky' ? 'cask' : 'bottles' }}</td></tr>
+@if($item['type'] === 'whisky')
+@foreach(['cask_type'=>'Cask type','cask_size'=>'Nominal cask capacity (L)','ola'=>'Original litres of alcohol (OLA, L)','rla'=>'Regauged litres of alcohol (RLA, L)','abv'=>'Recorded ABV (%)','measurement_date'=>'Measurement date'] as $key=>$label)<tr><td>{{ $label }}</td><td>{{ $item[$key] }}</td></tr>@endforeach
+@else<tr><td>Vintage / bottle size</td><td>{{ $item['vintage'] }} / {{ $item['bottle_ml'] }} mL</td></tr><tr><td>Total wine volume</td><td>{{ number_format($item['quantity']*$item['bottle_ml']/1000,2) }} L</td></tr>@endif
+@endforeach</table>
 <p class="foot">Client and stock details are frozen when the agreement is generated. OLA/RLA are recorded alcohol volumes, distinct from nominal cask capacity. Measurements are supplied demo data.</p>
 <div class="page"><div class="label">FINEWORTH / FW-{{ $id }}</div><h2>02 / Consideration and fees</h2>
-<table><tr><td>Unit price (per {{ $data['type'] === 'whisky' ? 'cask' : 'bottle' }})</td><td>{{ \App\Services\DealAgreement::money(\App\Services\DealAgreement::pennies($data['unit_price'])) }}</td></tr>
+<table>@foreach($data['items'] ?? [$data] as $item)<tr><td>{{ $item['reference'] }} · Unit price</td><td>{{ \App\Services\DealAgreement::money(\App\Services\DealAgreement::pennies($item['unit_price'])) }}</td></tr>@endforeach
 @foreach(['stock'=>'Stock subtotal','markup'=>'Markup ('.$data['markup_rate'].'%)','management'=>'Management fee ('.$data['management_rate'].'%)','brokerage'=>'Brokerage / commission ('.$data['brokerage_rate'].'%)','total'=>'Agreement total','deposit'=>'External deposit recorded','balance'=>'Remaining balance'] as $key=>$label)<tr class="{{ in_array($key,['total','balance']) ? 'total' : '' }}"><td>{{ $label }}</td><td>{{ \App\Services\DealAgreement::money($data['totals'][$key]) }}</td></tr>@endforeach
 <tr><td>Deposit date / reference</td><td>{{ $data['deposit_date'] }} / {{ $data['deposit_reference'] }}</td></tr><tr><td>Balance due</td><td>{{ $data['balance_due'] }}</td></tr></table>
 <h2>03 / Demonstration terms</h2>
 <p>Fineworth prepares this illustrative acquisition record for the named client and stock. Each fee is calculated once on the stock subtotal, rounded to the nearest penny, and then added to it. Markup is shown separately. No fee is compounded or recurring in this example.</p>
 <p>The deposit is a staff-entered record of an external payment; the portal neither collects nor verifies funds. The remaining balance is the agreement total less that deposit, due on the date above. Tax, duties, storage, insurance and cancellation terms are not modelled and require approved wording before commercial use.</p>
 <p>Publication means an administrator reviewed the document. Client review acknowledgement is not a legal signature, ownership transfer or confirmation of full payment. Electronic signing, when demonstrated, uses DocuSign sandbox only.</p>
+@if(!empty($data['terms']))<h2>Additional terms</h2><p style="white-space:pre-wrap">{{ $data['terms'] }}</p>@endif
 @include('agreements.signing-block')
 <p class="foot">Prepared by {{ $data['created_by'] }} · {{ $data['created_at'] }}<br>Fictional demonstration only. No guaranteed return, valuation or production contract is represented.</p></div>
 </body></html>

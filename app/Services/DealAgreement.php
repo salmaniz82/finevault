@@ -4,7 +4,8 @@ namespace App\Services;
 
 class DealAgreement
 {
-    public const TEMPLATE_VERSION = 'demo-2026-11-04-v3';
+    public const TEMPLATE_VERSION = 'demo-2026-11-12-v4';
+
     // Demonstration options, not approved commercial rates. Basis: net stock subtotal.
     public const RATES = [0, 1, 2, 2.5, 5, 10];
 
@@ -15,7 +16,10 @@ class DealAgreement
 
     public static function totals(array $data): array
     {
-        $base = self::pennies($data['unit_price']) * (int) $data['quantity'];
+        $base = 0;
+        foreach ($data['items'] ?? [$data] as $item) {
+            $base += self::pennies($item['unit_price']) * (int) $item['quantity'];
+        }
         $result = ['stock' => $base];
         foreach (['markup', 'management', 'brokerage'] as $fee) {
             $result[$fee] = (int) round($base * (float) $data[$fee.'_rate'] / 100, 0, PHP_ROUND_HALF_UP);

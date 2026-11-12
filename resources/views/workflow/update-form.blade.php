@@ -1,0 +1,6 @@
+<section class="card card-content"><h2>{{ isset($entry) ? 'Submit service results' : 'New holding update' }}</h2><form method="post" action="/holdings/{{ $holding->id }}/updates" enctype="multipart/form-data">@csrf
+@isset($entry)<input type="hidden" name="request_id" value="{{ $entry->id }}">@endisset
+<div class="form-grid"><label>Package title<input name="title" required maxlength="150" value="{{ old('title') }}"></label><label>Reports / photos · up to 15 files<input type="file" name="files[]" multiple accept=".pdf,.jpg,.jpeg,.png"><small>PDF/JPG/PNG · 10 MB each</small></label><label class="full">Notes<textarea name="notes" required maxlength="4000">{{ old('notes') }}</textarea></label>
+<label>Proposed storage location (optional)<input name="storage" maxlength="150"></label>
+@if($holding->data['type'] === 'whisky')<label>Proposed ABV (%)<input name="abv" type="number" min="0" max="100" step="0.0001"></label><label>Proposed bulk litres<input name="litres" type="number" min="0" max="10000" step="0.0001"></label>@endif</div>
+<p class="form-help">All files, notes and physical changes are reviewed as one package. The last approved information stays visible until publication.</p><button class="primary">Submit package for review</button></form></section>

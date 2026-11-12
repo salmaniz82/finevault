@@ -6,11 +6,11 @@ use App\Models\DocumentAcknowledgement;
 use App\Models\PortalEntry;
 use App\Models\User;
 use App\Services\Portal;
+use App\Services\Workflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PortalController extends Controller
@@ -59,6 +59,14 @@ class PortalController extends Controller
         abort_unless(in_array($page, ['dashboard', 'holdings', 'holding', 'documents', 'requests', 'clients', 'client', 'managers', 'approvals', 'account']), 404);
         abort_if(in_array($page, ['holding', 'client']) && ! $id, 404);
         $user = $request->user();
+        if ($page === 'documents') {
+            return redirect($user->role === 'client' ? '/onboarding' : '/clients');
+        }
+        if ($page === 'approvals') {
+            abort_unless($user->role === 'admin', 403);
+
+            return redirect('/activity');
+        }
         if (in_array($page, ['managers', 'approvals'])) {
             abort_unless($user->role === 'admin', 403);
         }
@@ -72,7 +80,7 @@ class PortalController extends Controller
         $managers = $user->role === 'admin' ? User::where('role', 'manager')->get() : collect();
         $submissions = $user->role === 'client' ? PortalEntry::where('client_id', $user->id)->where('kind', 'document')->whereField('uploaded_by_id', $user->id)->whereField('category', 'Onboarding')->latest()->get() : collect();
 
-        return view('portal', compact('page', 'user', 'clients', 'records', 'selected', 'client', 'managers', 'submissions'));
+        return view('workflow.workspace', compact('page', 'user', 'clients', 'records', 'selected', 'client', 'managers', 'submissions'));
     }
 
     public function user(Request $request)
@@ -97,7 +105,7 @@ class PortalController extends Controller
 
     public function holding(Request $request)
     {
-        abort_if($request->user()->role === 'client', 403);
+        abort_unless($request->user()->role === 'admin', 403);
         $data = $request->validate(['client_id' => 'required|integer', 'type' => 'required|in:whisky,wine', 'name' => 'required|string|max:160', 'reference' => 'required|string|max:80', 'producer' => 'required|string|max:100', 'quantity' => ['required', 'integer', 'min:1', Rule::when($request->input('type') === 'whisky', 'max:1', 'max:100000')], 'storage' => 'required|string|max:150', 'acquired' => 'required|date|before_or_equal:today', 'fill_date' => 'exclude_unless:type,whisky|nullable|date|before_or_equal:today', 'cask_type' => 'exclude_unless:type,whisky|nullable|string|max:100', 'abv' => 'exclude_unless:type,whisky|nullable|numeric|min:0|max:100', 'litres' => 'exclude_unless:type,whisky|nullable|numeric|min:0|max:10000', 'vintage' => 'exclude_unless:type,wine|nullable|integer|min:1800|max:2100', 'format' => 'exclude_unless:type,wine|nullable|string|max:80', 'bottle_ml' => 'exclude_unless:type,wine|required|numeric|min:1|max:30000', 'bottles_per_case' => 'exclude_unless:type,wine|nullable|integer|min:1|max:1000', 'notes' => 'nullable|string|max:2000']);
         $this->portal->client($request->user(), $data['client_id']);
         if ($data['type'] === 'whisky') {
@@ -110,35 +118,7 @@ class PortalController extends Controller
 
     public function document(Request $request)
     {
-        $data = $request->validate(['client_id' => 'required|integer', 'holding_id' => 'nullable|integer', 'title' => 'required|string|max:150', 'category' => 'required|in:Ownership,Storage,Regauge,Evaluation,Onboarding,KYC', 'visibility' => 'required|in:client,staff', 'document_date' => 'required|date|before_or_equal:today', 'notes' => 'nullable|string|max:2000', 'replaces_id' => 'nullable|integer', 'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240']);
-        $this->portal->client($request->user(), $data['client_id']);
-        if (! empty($data['holding_id'])) {
-            abort_unless($this->portal->record($request->user(), $data['holding_id'], 'holding')->client_id === (int) $data['client_id'], 422);
-        }
-        $previous = ! empty($data['replaces_id']) ? $this->portal->record($request->user(), $data['replaces_id'], 'document') : null;
-        if ($previous) {
-            abort_unless($previous->client_id === (int) $data['client_id'] && $previous->data['status'] === 'approved' && ($previous->data['holding_id'] ?? null) == ($data['holding_id'] ?? null) && $previous->data['category'] === $data['category'] && $previous->data['visibility'] === $data['visibility'], 422);
-        }
-        if ($request->user()->role === 'client') {
-            $data['category'] = 'Onboarding';
-            $data['visibility'] = 'staff';
-            $data['replaces_id'] = null;
-            abort_if($previous !== null, 403);
-        }
-        if ($data['category'] === 'KYC') {
-            $data['visibility'] = 'staff';
-        }
-        $file = $request->file('file');
-        unset($data['file']);
-        $path = $file->store('documents', 'local');
-        try {
-            PortalEntry::create(['client_id' => $data['client_id'], 'kind' => 'document', 'data' => array_merge($data, ['path' => $path, 'original_name' => $file->getClientOriginalName(), 'status' => 'pending', 'uploaded_by' => $request->user()->name, 'uploaded_by_id' => $request->user()->id, 'series' => $previous?->data['series'] ?? (string) Str::uuid()])]);
-        } catch (\Throwable $e) {
-            Storage::disk('local')->delete($path);
-            throw $e;
-        }
-
-        return back()->with('success', 'Document submitted for admin review. Approved versions remain in history.');
+        abort(410, 'Use client onboarding or submit a holding update package.');
     }
 
     public function download(Request $request, int $id)
@@ -167,7 +147,9 @@ class PortalController extends Controller
         $data = $request->validate(['holding_id' => 'required|integer', 'type' => 'required|in:Evaluation,Regauge,Inspection,Photographs', 'notes' => 'required|string|max:2000']);
         $holding = $this->portal->record($request->user(), $data['holding_id'], 'holding');
         abort_if($data['type'] === 'Regauge' && $holding->data['type'] !== 'whisky', 422, 'Regauging applies to whisky casks only.');
-        PortalEntry::create(['client_id' => $request->user()->id, 'kind' => 'request', 'data' => array_merge($data, ['status' => 'submitted', 'holding_name' => $holding->data['name']])]);
+        PortalEntry::create(['client_id' => $request->user()->id, 'kind' => 'request', 'data' => array_merge($data, ['status' => 'pending', 'holding_name' => $holding->data['name']])]);
+
+        Workflow::notify(Workflow::admins(), 'New client service request.', '/requests');
 
         return back()->with('success', 'Request sent to your portfolio team.');
     }
@@ -175,25 +157,19 @@ class PortalController extends Controller
     public function progress(Request $request, int $id)
     {
         abort_if($request->user()->role === 'client', 403);
-        $record = $this->portal->record($request->user(), $id, 'request');
-        $data = $request->validate(['status' => 'required|in:submitted,in progress,completed', 'staff_note' => 'nullable|string|max:2000']);
-        DB::transaction(function () use ($record, $data, $request) {
-            $locked = PortalEntry::whereKey($record->id)->lockForUpdate()->firstOrFail();
-            $history = $locked->data['history'] ?? [];
-            $history[] = $data + ['by' => $request->user()->name, 'actor_id' => $request->user()->id, 'at' => now()->toIso8601String()];
-            $locked->update(['data' => array_merge($locked->data, $data, ['history' => $history])]);
+        $this->portal->record($request->user(), $id, 'request');
+        $data = $request->validate(['status' => 'required|in:in progress', 'staff_note' => 'nullable|string|max:2000']);
+        DB::transaction(function () use ($id, $data) {
+            $record = PortalEntry::whereKey($id)->lockForUpdate()->firstOrFail();
+            abort_unless(Workflow::requestStatus($record->status) === 'pending', 409);
+            app(UpdateController::class)->transition($record, 'in progress', $data['staff_note'] ?? 'Work started.');
         });
 
-        return back()->with('success', 'Request updated.');
+        return back()->with('success', 'Request moved to In progress.');
     }
 
     public function profile(Request $request, int $id)
     {
-        abort_if($request->user()->role === 'client', 403);
-        $client = $this->portal->client($request->user(), $id);
-        $data = $request->validate(['name' => 'required|string|max:100', 'notes' => 'required|string|max:2000']);
-        PortalEntry::create(['client_id' => $client->id, 'kind' => 'profile', 'data' => $data + ['status' => 'pending', 'uploaded_by' => $request->user()->name, 'uploaded_by_id' => $request->user()->id]]);
-
-        return back()->with('success', 'Profile change submitted for approval.');
+        abort(410, 'Manage onboarding details within the client profile.');
     }
 }

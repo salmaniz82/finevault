@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\PortalEntry;
 use App\Services\DealAgreement;
+use App\Services\DomainRecords;
 use App\Services\Portal;
+use App\Services\Workflow;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -28,7 +31,22 @@ class DealController extends Controller
     public function store(Request $request)
     {
         abort_unless($request->user()->role === 'admin', 403);
-        $data = $request->validate([
+        $data = $this->validated($request);
+        $client = $this->portal->client($request->user(), (int) $data['client_id']);
+        $data['totals'] = DealAgreement::totals($data);
+        if ($data['totals']['balance'] < 0) {
+            throw ValidationException::withMessages(['deposit' => 'Deposit cannot exceed the total agreement amount.']);
+        }
+        $data += ['status' => 'draft', 'client_name' => $client->name, 'client_email' => $client->email,
+            'created_by' => $request->user()->name, 'created_by_id' => $request->user()->id, 'created_at' => now()->toIso8601String(), 'template_version' => DealAgreement::TEMPLATE_VERSION];
+        $deal = PortalEntry::create(['client_id' => $client->id, 'kind' => 'deal', 'data' => $data]);
+
+        return redirect('/deals/'.$deal->id)->with('success', 'Deal draft saved. Generate its agreement to send it for admin review.');
+    }
+
+    private function validated(Request $request): array
+    {
+        $rules = [
             'client_id' => 'required|integer', 'type' => 'required|in:whisky,wine',
             'name' => 'required|string|max:160', 'reference' => 'required|string|max:80',
             'producer' => 'required|string|max:100', 'storage' => 'required|string|max:150',
@@ -50,17 +68,66 @@ class DealController extends Controller
             'markup_rate' => ['required', Rule::in(DealAgreement::RATES)],
             'management_rate' => ['required', Rule::in(DealAgreement::RATES)],
             'brokerage_rate' => ['required', Rule::in(DealAgreement::RATES)],
-        ]);
-        $client = $this->portal->client($request->user(), (int) $data['client_id']);
-        $data['totals'] = DealAgreement::totals($data);
-        if ($data['totals']['balance'] < 0) {
-            throw ValidationException::withMessages(['deposit' => 'Deposit cannot exceed the total agreement amount.']);
-        }
-        $data += ['status' => 'draft', 'client_name' => $client->name, 'client_email' => $client->email,
-            'created_by' => $request->user()->name, 'created_by_id' => $request->user()->id, 'created_at' => now()->toIso8601String(), 'template_version' => DealAgreement::TEMPLATE_VERSION];
-        $deal = PortalEntry::create(['client_id' => $client->id, 'kind' => 'deal', 'data' => $data]);
+        ];
+        $rules['terms'] = 'nullable|string|max:10000';
+        if (! $request->has('items')) {
+            $data = $request->validate($rules);
+            $data['items'] = [Arr::only($data, [...DomainRecords::ITEM, 'unit_price'])];
 
-        return redirect('/deals/'.$deal->id)->with('success', 'Deal draft saved. Generate its agreement to send it for admin review.');
+            return $data;
+        }
+        $itemKeys = [...DomainRecords::ITEM, 'unit_price'];
+        $common = Arr::except($rules, $itemKeys);
+        $data = $request->validate($common + ['items' => 'required|array|min:1|max:50', 'items.*' => 'required|array']);
+        $items = [];
+        foreach ($data['items'] as $position => $item) {
+            $itemRules = Arr::only($rules, $itemKeys);
+            $itemRules['quantity'] = 'required|integer|min:1|max:'.(($item['type'] ?? '') === 'whisky' ? '1' : '100000');
+            $validator = validator($item, $itemRules);
+            if ($validator->fails()) {
+                throw ValidationException::withMessages(collect($validator->errors()->messages())->mapWithKeys(fn ($messages, $key) => ['items.'.$position.'.'.$key => $messages])->all());
+            }
+            $items[] = $validator->validated();
+        }
+        $data['items'] = $items;
+
+        return $data + $items[0];
+    }
+
+    public function edit(Request $request, int $id)
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+        $data = $this->validated($request);
+        DB::transaction(function () use ($request, $id, $data) {
+            $entry = PortalEntry::where('kind', 'deal')->lockForUpdate()->findOrFail($id);
+            abort_unless($entry->client_id === (int) $data['client_id'] && in_array($entry->status, ['draft', 'pending']) && empty($entry->data['envelope_id']), 409, 'Only unpublished drafts can be edited.');
+            $totals = DealAgreement::totals($data);
+            if ($totals['balance'] < 0) {
+                throw ValidationException::withMessages(['deposit' => 'Deposit cannot exceed total.']);
+            }
+            $old = $entry->data;
+            if (! empty($old['document_id'])) {
+                $document = PortalEntry::findOrFail($old['document_id']);
+                if ($document->status === 'pending') {
+                    $this->portal->review($request->user(), $document->id, 'rejected', 'Retained draft replaced by an edited agreement.');
+                }
+            }
+            $snapshot = array_merge($old, $data, ['totals' => $totals]);
+            $model = $entry->deal;
+            $model->update(['client_address' => $data['client_address'], 'balance_due' => $data['balance_due'], 'stock_minor' => $totals['stock'], 'total_minor' => $totals['total'], 'balance_minor' => $totals['balance'], 'agreement_snapshot' => $snapshot, 'document_id' => null, 'review_note' => null]);
+            $model->items()->delete();
+            foreach ($data['items'] as $position => $item) {
+                $model->items()->create(['position' => $position + 1, 'unit_price_minor' => DealAgreement::pennies($item['unit_price'])] + Arr::only($item, DomainRecords::ITEM));
+            }
+            foreach (['markup', 'management', 'brokerage'] as $fee) {
+                $model->fees()->where('type', $fee)->update(['rate' => $data[$fee.'_rate'], 'amount_minor' => $totals[$fee]]);
+            }
+            $model->deposits()->update(['amount_minor' => $totals['deposit'], 'reference' => $data['deposit_reference'], 'recorded_date' => $data['deposit_date']]);
+            DB::table('portal_entries')->where('id', $id)->update(['status' => 'draft', 'updated_at' => now()]);
+            Workflow::audit('agreement.draft_edited', $id);
+        });
+
+        return back()->with('success', 'Draft updated. Generate a new PDF to review before publishing.');
     }
 
     public function show(Request $request, int $id)

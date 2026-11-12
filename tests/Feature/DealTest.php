@@ -2,24 +2,30 @@
 
 namespace Tests\Feature;
 
+use App\Models\Holding;
 use App\Models\PortalEntry;
 use App\Models\User;
 use App\Services\DealAgreement;
 use App\Services\DocusignDemo;
+use App\Services\DomainRecords;
 use Database\Seeders\PrototypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DealTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Support\WorkflowFixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('local');
         $this->seed(PrototypeSeeder::class);
+        foreach (User::where('role', 'client')->get() as $client) {
+            $this->approveClient($client);
+        }
     }
 
     private function user(string $email): User
@@ -98,10 +104,10 @@ class DealTest extends TestCase
         $amounts = DealAgreement::totals(array_replace($this->payload(), ['quantity' => 1, 'unit_price' => '0.10', 'markup_rate' => 5, 'management_rate' => 0, 'brokerage_rate' => 0, 'deposit' => '0.01']));
         $this->assertSame(1, $amounts['markup']);
         $this->assertSame(10, $amounts['balance']);
-        $this->actingAs($this->user('admin'))->get('/dashboard')->assertSee('3 items need attention')->assertDontSee('Collection mix');
+        $this->actingAs($this->user('admin'))->get('/dashboard')->assertSee('Service requests')->assertDontSee('Collection mix');
         $pending = PortalEntry::where('kind', 'profile')->firstOrFail();
         $this->post('/approvals/'.$pending->id, ['decision' => 'approved']);
-        $this->get('/dashboard')->assertSee('2 items need attention');
+        $this->get('/dashboard')->assertSee('Service requests');
     }
 
     public function test_manager_cannot_view_or_change_deals_or_agreements(): void
@@ -146,13 +152,99 @@ class DealTest extends TestCase
         $signing->shouldReceive('completedPdf')->once()->with($envelope)->andReturn('%PDF-1.4 fictional signed test');
         $this->post('/deals/'.$deal->id.'/signing-refresh')->assertRedirect();
         $signed = PortalEntry::findOrFail($deal->fresh()->data['signed_document_id']);
-        $this->assertSame('pending', $signed->data['status']);
+        $this->assertSame('approved', $signed->data['status']);
         $this->assertSame($original, $signed->data['replaces_id']);
-        $this->get('/documents/'.$signed->id.'/download')->assertNotFound();
+        $this->get('/documents/'.$signed->id.'/download')->assertOk();
         $this->post('/deals/'.$deal->id.'/signing-refresh')->assertRedirect();
         $this->assertSame(1, PortalEntry::where('kind', 'document')->whereField('replaces_id', $original)->count());
-        $this->actingAs($this->user('admin'))->post('/approvals/'.$signed->id, ['decision' => 'approved'])->assertRedirect();
+        $this->actingAs($this->user('admin'))->post('/approvals/'.$signed->id, ['decision' => 'approved'])->assertStatus(409);
         $this->actingAs($this->user('client'))->get('/documents/'.$signed->id.'/download')->assertOk();
         $this->get('/documents/'.$original.'/download')->assertOk();
+        $this->post('/deals/'.$deal->id.'/sign', ['sandbox_ack' => 1])->assertStatus(409);
+    }
+
+    public function test_mixed_agreement_drafts_can_be_edited_until_publication_and_retain_old_pdf(): void
+    {
+        $wine = Arr::only($this->payload(), [...DomainRecords::ITEM, 'unit_price']);
+        $whisky = ['type' => 'whisky', 'name' => 'Test cask', 'reference' => 'CASK-TEST', 'producer' => 'Test distillery', 'storage' => 'Test bond', 'quantity' => 1, 'unit_price' => '1000.00', 'cask_type' => 'Barrel', 'cask_size' => 200, 'ola' => 120, 'rla' => 110, 'abv' => 60, 'measurement_date' => now()->toDateString()];
+        $payload = Arr::except($this->payload(), [...DomainRecords::ITEM, 'unit_price']);
+        $payload['items'] = [$wine, $whisky];
+        $payload['terms'] = 'Terms for mixed stock.';
+        $this->actingAs($this->user('admin'))->post('/deals', $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $deal = PortalEntry::where('kind', 'deal')->firstOrFail();
+        $this->assertCount(2, $deal->data['items']);
+        $this->assertSame(700000, $deal->data['totals']['stock']);
+        $this->post('/deals/'.$deal->id.'/generate')->assertRedirect();
+        $original = $deal->fresh()->data['document_id'];
+        $path = PortalEntry::find($original)->data['path'];
+        $hash = hash('sha256', Storage::disk('local')->get($path));
+        $payload['items'][0]['quantity'] = 30;
+        $this->post('/deals/'.$deal->id.'/edit', $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('draft', $deal->fresh()->status);
+        $this->assertSame(850000, $deal->fresh()->data['totals']['stock']);
+        $this->assertSame('rejected', PortalEntry::find($original)->status);
+        $this->assertSame($hash, hash('sha256', Storage::disk('local')->get($path)));
+        $this->post('/deals/'.$deal->id.'/generate')->assertRedirect();
+        $source = $deal->fresh()->data['document_id'];
+        $this->assertNotSame($original, $source);
+        $this->post('/approvals/'.$source, ['decision' => 'approved'])->assertRedirect();
+        $this->post('/deals/'.$deal->id.'/edit', $payload)->assertStatus(409);
+        $this->actingAs($this->user('manager'))->post('/deals/'.$deal->id.'/edit', $payload)->assertForbidden();
+    }
+
+    public function test_holdings_need_their_signed_agreement_and_explicit_release(): void
+    {
+        $client = $this->user('client');
+        $holding = Holding::where('client_id', $client->id)->first();
+        $this->actingAs($client)->get('/holding/'.$holding->id)->assertNotFound();
+        $this->get('/dashboard')->assertRedirect('/deals');
+        $signed = $this->signedAgreement($client);
+        $this->actingAs($this->user('admin'))->post('/holdings/'.$holding->id.'/agreement', ['agreement_id' => $signed->id])->assertRedirect();
+        $this->actingAs($client)->get('/holding/'.$holding->id)->assertNotFound();
+        $this->actingAs($this->user('manager'))->post('/holdings/'.$holding->id.'/release')->assertForbidden();
+        $this->actingAs($this->user('admin'))->post('/holdings/'.$holding->id.'/release')->assertRedirect();
+        $this->actingAs($client)->get('/holding/'.$holding->id)->assertOk();
+        $this->get('/dashboard')->assertOk();
+        $this->actingAs($this->user('admin'))->post('/deals', $this->payload())->assertRedirect();
+        $draft = PortalEntry::where('kind', 'deal')->latest('id')->first();
+        $new = Holding::where('client_id', $client->id)->where('id', '!=', $holding->id)->first();
+        $this->post('/holdings/'.$new->id.'/agreement', ['agreement_id' => $draft->id])->assertRedirect();
+        $this->post('/holdings/'.$new->id.'/release')->assertStatus(409);
+        $this->actingAs($client)->get('/holding/'.$holding->id)->assertOk();
+        $this->get('/holding/'.$new->id)->assertNotFound();
+        $this->actingAs($this->user('admin'))->post('/holdings/'.$holding->id.'/agreement', ['agreement_id' => $draft->id])->assertStatus(409);
+        $other = Holding::where('client_id', $this->user('james')->id)->first();
+        $this->post('/holdings/'.$other->id.'/agreement', ['agreement_id' => $signed->id])->assertNotFound();
+    }
+
+    public function test_dashboard_timeline_shows_five_published_agreements_with_status_and_no_drafts(): void
+    {
+        $this->actingAs($this->user('admin'));
+        $signed = [];
+        for ($i = 0; $i < 6; $i++) {
+            $signed[] = $this->signedAgreement($this->user('client'));
+            $this->travel(1)->minutes();
+        }
+        $this->post('/deals', $this->payload())->assertRedirect();
+        $published = PortalEntry::where('kind', 'deal')->latest('id')->firstOrFail();
+        $this->post('/deals/'.$published->id.'/generate')->assertRedirect();
+        $this->post('/approvals/'.$published->fresh()->data['document_id'], ['decision' => 'approved'])->assertRedirect();
+        $this->travel(1)->minutes();
+        $this->post('/deals', array_replace($this->payload(), ['name' => 'Unpublished draft item']))->assertRedirect();
+        $draft = PortalEntry::where('kind', 'deal')->latest('id')->firstOrFail();
+        $holding = Holding::where('client_id', $this->user('client')->id)->firstOrFail();
+        foreach (['pending', 'pending', 'in progress', 'pending review', 'resolved', 'pending'] as $status) {
+            PortalEntry::create(['client_id' => $holding->client_id, 'kind' => 'request', 'data' => ['holding_id' => $holding->id, 'holding_name' => $holding->name, 'type' => 'Inspection', 'notes' => 'Dashboard fixture', 'status' => $status]]);
+            $this->travel(1)->minutes();
+        }
+        $response = $this->get('/dashboard')->assertOk()->assertDontSee('<table', false)->assertSee('Signed')->assertSee('Pending signature')
+            ->assertSee('Inspection by '.$this->user('client')->name)->assertSee('Pending review')->assertSee('Resolved');
+        $this->assertSame(5, substr_count($response->getContent(), 'data-dashboard-agreement='));
+        $this->assertSame(5, substr_count($response->getContent(), 'data-dashboard-service='));
+        $response->assertSee('data-dashboard-agreement="'.$published->id.'"', false)
+            ->assertDontSee('data-dashboard-agreement="'.$draft->id.'"', false)
+            ->assertDontSee('data-dashboard-agreement="'.$signed[0]->id.'"', false)
+            ->assertDontSee('data-dashboard-agreement="'.$signed[1]->id.'"', false);
+        $this->actingAs($this->user('manager'))->get('/dashboard')->assertOk()->assertDontSee('data-dashboard-agreement=', false)->assertSee('Inspection by '.$this->user('client')->name);
     }
 }

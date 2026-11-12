@@ -12,7 +12,7 @@
             <thead><tr>
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
-                @if($page === 'clients')<th scope="col">Holdings</th><th scope="col">Managers</th>
+                @if($page === 'clients')<th scope="col">Holdings</th><th scope="col">Managers / onboarding</th>
                 @else<th scope="col">Assigned clients</th>@endif
                 <th scope="col">Actions</th>
             </tr></thead>
@@ -23,7 +23,7 @@
                         <td>{{ $person->email }}</td>
                         @if($page === 'clients')
                             <td>{{ \App\Services\HoldingMeasurements::totals($holdings->where('client_id',$person->id)) }}</td>
-                            <td>{{ count($person->manager_ids ?? []) }} assigned</td>
+                            <td>{{ count($person->manager_ids ?? []) }} assigned<small>{{ ucfirst($person->clientProfile?->onboarding_status ?? 'draft') }}</small></td>
                             <td><a class="text-link" href="/client/{{ $person->id }}" aria-label="View client {{ $person->name }}">View client →</a></td>
                         @else
                             <td>{{ $clients->filter(fn($c)=>in_array($person->id,$c->manager_ids ?? []))->count() }} clients</td>

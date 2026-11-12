@@ -33,6 +33,13 @@ class Portal
                 });
         }
         if ($user->role === 'client') {
+            if (! Workflow::approved($user)) {
+                $query->whereRaw('1 = 0');
+            }
+            $visibleHolding = fn ($holding) => $holding->released();
+            $query->where(fn ($q) => $q->where('kind', '!=', 'holding')->orWhereHas('holding', $visibleHolding));
+            $query->where(fn ($q) => $q->where('kind', '!=', 'request')->orWhereHas('serviceRequest.holding', $visibleHolding));
+            $query->where(fn ($q) => $q->where('kind', '!=', 'document')->orWhereHas('documentVersion', fn ($v) => $v->whereNull('holding_id')->orWhereHas('holding', $visibleHolding)));
             $query->where(function ($q) {
                 $q->where('kind', '!=', 'deal')->orWhereIn('status', ['published', 'reviewed']);
             });
@@ -62,6 +69,7 @@ class Portal
         abort_unless($actor->role === 'admin', 403);
         DB::transaction(function () use ($actor, $id, $decision, $reason) {
             $record = PortalEntry::lockForUpdate()->findOrFail($id);
+            abort_unless($record->kind === 'document', 409, 'Review records in their workflow.');
             abort_unless(in_array($record->kind, ['document', 'profile']) && $record->data['status'] === 'pending', 409);
             $data = array_merge($record->data, ['status' => $decision, 'reviewed_by' => $actor->name, 'reviewed_by_id' => $actor->id, 'reviewed_at' => now()->toIso8601String(), 'review_note' => $reason]);
             $record->update(['data' => $data]);
@@ -69,6 +77,10 @@ class Portal
                 $deal = PortalEntry::where('kind', 'deal')->lockForUpdate()->findOrFail($data['deal_id']);
                 abort_unless(($deal->data['document_id'] ?? null) === $record->id && $deal->client_id === $record->client_id, 409);
                 $deal->update(['data' => array_merge($deal->data, ['status' => $decision === 'approved' ? 'published' : 'rejected', 'review_note' => $reason])]);
+                if ($decision === 'approved') {
+                    Workflow::audit('agreement.published', $deal->id);
+                    Workflow::notify([$deal->client_id], 'An agreement is awaiting your signature.', '/deals/'.$deal->id);
+                }
             }
             if ($record->kind === 'profile' && $decision === 'approved') {
                 User::findOrFail($record->client_id)->update(['name' => $data['name']]);
